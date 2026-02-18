@@ -229,7 +229,8 @@ export default function HomePage() {
 
   const saveBanner = async (url, size, promptText) => {
     try {
-      // 1. Save banner
+      // O contador (generations_count) agora é incrementado automaticamente 
+      // via Trigger no Banco de Dados quando um novo banner é inserido.
       const { error: saveError } = await supabase.from('banners').insert([
         {
           user_id: user.id,
@@ -240,21 +241,10 @@ export default function HomePage() {
       ]);
       if (saveError) throw saveError;
 
-      // 2. Increment count in profile
-      const { error: updateError } = await supabase.rpc('increment_generations', { user_id: user.id });
-
-      // Se a RPC falhar, tentamos update manual (depende se a RPC foi criada)
-      if (updateError) {
-        await supabase
-          .from('profiles')
-          .update({ generations_count: userData.generationsCount + 1 })
-          .eq('id', user.id);
-      }
-
-      // Refresh local state
-      fetchProfile(user.id);
+      // Aguarda um pouco para o trigger processar e atualiza os dados locais
+      setTimeout(() => fetchProfile(user.id), 1000);
     } catch (e) {
-      console.error('Erro ao salvar banner/contagem:', e);
+      console.error('Erro ao salvar banner:', e);
     }
   };
 

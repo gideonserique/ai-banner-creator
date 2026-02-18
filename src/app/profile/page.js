@@ -13,7 +13,8 @@ export default function ProfilePage() {
         whatsapp: '',
         logo_url: '',
         subscription_tier: 'free',
-        generations_count: 0
+        generations_count: 0,
+        stripe_customer_id: ''
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -45,7 +46,8 @@ export default function ProfilePage() {
                         whatsapp: data.whatsapp || '',
                         logo_url: data.logo_url || '',
                         subscription_tier: data.subscription_tier || 'free',
-                        generations_count: data.generations_count || 0
+                        generations_count: data.generations_count || 0,
+                        stripe_customer_id: data.stripe_customer_id || ''
                     });
                 }
             }
@@ -154,6 +156,35 @@ export default function ProfilePage() {
         alert('Por motivos de segurança, entre em contato com o suporte para excluir sua conta permanentemente: gideonseriquevfx@gmail.com');
     };
 
+    const handleManageSubscription = async () => {
+        if (!profile.stripe_customer_id) {
+            setError('ID do cliente Stripe não encontrado. Se você acabou de assinar, aguarde alguns minutos.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const response = await fetch('/api/customer-portal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerId: profile.stripe_customer_id
+                }),
+            });
+
+            const data = await response.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || 'Erro ao abrir portal de gerenciamento');
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className={styles.main} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -244,8 +275,13 @@ export default function ProfilePage() {
                                     {saving ? <span className={styles.spinner} /> : 'Assinar Agora'}
                                 </button>
                             ) : (
-                                <button className={styles.secondaryBtn} style={{ marginTop: '20px', width: '100%' }}>
-                                    Gerenciar Assinatura
+                                <button
+                                    className={styles.secondaryBtn}
+                                    style={{ marginTop: '20px', width: '100%' }}
+                                    onClick={handleManageSubscription}
+                                    disabled={saving}
+                                >
+                                    {saving ? <span className={styles.spinner} /> : 'Gerenciar Assinatura'}
                                 </button>
                             )}
                         </div>
