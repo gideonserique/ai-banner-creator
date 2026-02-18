@@ -228,6 +228,7 @@ export default function HomePage() {
   };
 
   const saveBanner = async (url, size, promptText) => {
+    setError(null);
     try {
       // O contador (generations_count) agora é incrementado automaticamente 
       // via Trigger no Banco de Dados quando um novo banner é inserido.
@@ -241,10 +242,13 @@ export default function HomePage() {
       ]);
       if (saveError) throw saveError;
 
+      console.log('✅ Banner salvo com sucesso. O Trigger deve incrementar o contador.');
+
       // Aguarda um pouco para o trigger processar e atualiza os dados locais
-      setTimeout(() => fetchProfile(user.id), 1000);
+      setTimeout(() => fetchProfile(user.id), 1500);
     } catch (e) {
       console.error('Erro ao salvar banner:', e);
+      setError('Sua arte foi gerada, mas houve um erro ao salvá-la na galeria: ' + e.message);
     }
   };
 
