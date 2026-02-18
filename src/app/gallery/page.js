@@ -1,0 +1,243 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import styles from '../page.module.css';
+
+const SIZES = [
+    { id: 'square', label: 'Quadrado', icon: '◻', dims: '1080×1080' },
+    { id: 'portrait', label: 'Vertical', icon: '▯', dims: '1080×1920' },
+    { id: 'landscape', label: 'Horizontal', icon: '▬', dims: '1280×720' },
+];
+
+export default function GalleryPage() {
+    const [banners, setBanners] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
+    const [previewBanner, setPreviewBanner] = useState(null);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setUser(session.user);
+                fetchBanners(session.user.id);
+            } else {
+                setLoading(false);
+            }
+        };
+        checkUser();
+    }, []);
+
+    const fetchBanners = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('banners')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setBanners(data || []);
+        } catch (err) {
+            console.error('Erro ao buscar banners:', err);
+            setError('Certifique-se de que a tabela "banners" foi criada no seu Supabase. Verifique o guia database_setup.md.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownload = (base64, size, id) => {
+        const link = document.createElement('a');
+        link.href = base64;
+        link.download = `meu-banner-${size}-${id}.png`;
+        link.click();
+    };
+
+    const handleShare = async (base64, size) => {
+        try {
+            const res = await fetch(base64);
+            const blob = await res.blob();
+            const file = new File([blob], `banner-${size}.png`, { type: 'image/png' });
+
+            if (navigator.share) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Meu Banner de Restaurante',
+                });
+            } else {
+                alert('Compartilhamento não suportado neste navegador. Tente baixar a imagem.');
+            }
+        } catch (err) {
+            console.error('Erro ao compartilhar:', err);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Excluir este banner permanentemente?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('banners')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            setBanners(prev => prev.filter(b => b.id !== id));
+        } catch (err) {
+            console.error('Erro ao excluir:', err);
+            alert('Erro ao excluir banner.');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className={styles.main} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className={styles.spinner} />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className={styles.main}>
+                <div className={styles.container} style={{
+                    textAlign: 'center',
+                    paddingTop: '100px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '20px'
+                }}>
+                    <h1 className={styles.heroTitle}>Acesso Restrito</h1>
+                    <p className={styles.heroSub} style={{ margin: '0 auto' }}>Você precisa estar logado para ver sua galeria.</p>
+                    <Link href="/login" className={styles.primaryBtn} style={{ maxWidth: '200px' }}>
+                        Entrar agora
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <main className={styles.main}>
+            {previewBanner && (
+                <div className={styles.modalOverlay} onClick={() => setPreviewBanner(null)}>
+                    <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh' }}>
+                        <img
+                            src={previewBanner.image_url}
+                            alt="Preview"
+                            style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '12px', objectFit: 'contain' }}
+                        />
+                        <div className={styles.modalActions} style={{ marginTop: '20px' }}>
+                            <button className={styles.primaryBtn} onClick={() => handleDownload(previewBanner.image_url, previewBanner.size, previewBanner.id)}>
+                                Baixar Agora
+                            </button>
+                            <button className={styles.secondaryBtn} onClick={() => setPreviewBanner(null)}>
+                                Fechar
+                            </button>
+                        </div>
+                        <button className={styles.closeModal} onClick={() => setPreviewBanner(null)}>×</button>
+                    </div>
+                </div>
+            )}
+
+            <div className={styles.bgOrbs}>
+                <div className={styles.orb1} />
+                <div className={styles.orb2} />
+            </div>
+
+            <div className={styles.container}>
+                <header className={styles.header}>
+                    <div className={styles.logo} onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
+                        <span className={styles.logoIcon}>✦</span>
+                        <span className={styles.logoText}>BannerIA</span>
+                    </div>
+                    <nav className={styles.navButtons}>
+                        <Link href="/" className={styles.loginLink}>Novo Banner</Link>
+                        <Link href="/profile" className={styles.loginLink}>Meu Perfil</Link>
+                    </nav>
+                </header>
+
+                <section className={styles.hero} style={{ marginBottom: '40px' }}>
+                    <h1 className={styles.heroTitle}>Minha <span className={styles.heroGradient}>Galeria</span></h1>
+                    <p className={styles.heroSub}>Todas as suas criações gastronômicas em um só lugar.</p>
+                </section>
+
+                {error && (
+                    <div className={styles.errorMessage} style={{ marginBottom: '30px', textAlign: 'center' }}>
+                        {error}
+                    </div>
+                )}
+
+                {banners.length === 0 ? (
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '24px',
+                        padding: '60px 0'
+                    }}>
+                        <p className={styles.heroSub} style={{ margin: '0 auto' }}>Você ainda não gerou nenhum banner.</p>
+                        <Link href="/" className={styles.primaryBtn} style={{ maxWidth: '250px' }}>
+                            Começar a Criar
+                        </Link>
+                    </div>
+                ) : (
+                    <div className={styles.variationsGrid} style={{
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: '24px'
+                    }}>
+                        {banners.map((b) => (
+                            <div key={b.id} className={styles.variationCard}>
+                                <div
+                                    className={styles.variationPreview}
+                                    style={{
+                                        aspectRatio: SIZES.find(s => s.id === b.size)?.dims.replace('×', '/') || '1/1',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => setPreviewBanner(b)}
+                                >
+                                    <img
+                                        src={b.image_url}
+                                        alt="Banner Salvo"
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
+                                    />
+                                </div>
+                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {b.prompt}
+                                </p>
+                                <div className={styles.actionGroup} style={{ marginTop: '12px' }}>
+                                    <button
+                                        className={styles.selectBtn}
+                                        style={{ flex: 1, padding: '8px' }}
+                                        onClick={() => handleDownload(b.image_url, b.size, b.id)}
+                                    >
+                                        Baixar
+                                    </button>
+                                    <button
+                                        className={styles.shareBtn}
+                                        style={{ flex: 1, padding: '8px' }}
+                                        onClick={() => handleShare(b.image_url, b.size)}
+                                    >
+                                        Compartilhar
+                                    </button>
+                                    <button
+                                        className={styles.dangerBtn}
+                                        style={{ padding: '8px', fontSize: '12px', minWidth: '40px' }}
+                                        onClick={() => handleDelete(b.id)}
+                                        title="Excluir Banner"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </main>
+    );
+}
