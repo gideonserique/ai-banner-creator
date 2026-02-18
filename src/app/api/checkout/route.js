@@ -9,6 +9,17 @@ export async function POST(req) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+
+        if (!appUrl.startsWith('http')) {
+            throw new Error(`Invalid NEXT_PUBLIC_APP_URL: ${appUrl}. It must start with http:// or https://`);
+        }
+
+        const success_url = `${appUrl}/profile?success=true`;
+        const cancel_url = `${appUrl}/profile?canceled=true`;
+
+        console.log('🔗 Creating Stripe Session with:', { success_url, cancel_url });
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -38,8 +49,8 @@ export async function POST(req) {
                 },
             ],
             mode: 'subscription',
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?success=true`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?canceled=true`,
+            success_url,
+            cancel_url,
             customer_email: email,
             client_reference_id: userId,
             metadata: {
