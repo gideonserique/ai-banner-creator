@@ -1,4 +1,3 @@
-import { headers } from 'next/headers';
 import { stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { NextResponse } from 'next/server';
@@ -8,7 +7,7 @@ export async function POST(req) {
 
     try {
         const body = await req.text();
-        const signature = headers().get('stripe-signature');
+        const signature = req.headers.get('stripe-signature');
 
         console.log('Checking Environment Variables:');
         console.log('- STRIPE_WEBHOOK_SECRET:', process.env.STRIPE_WEBHOOK_SECRET ? '✅ Present' : '❌ MISSING');
