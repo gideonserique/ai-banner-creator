@@ -414,18 +414,12 @@ export default function HomePage() {
         </header>
 
         <section className={styles.hero}>
-          <div className={styles.heroTag}>
-            <span className={styles.heroDot} />
-            Especial para Restaurantes & Lanchonetes
-          </div>
+
           <h1 className={styles.heroTitle}>
             Banners de
             <span className={styles.heroGradient}> gastronomia</span>
-            <br />prontos em segundos
           </h1>
-          <p className={styles.heroSub}>
-            Descreva seu prato ou promoção e receba um banner profissional com gramática impecável para suas redes sociais.
-          </p>
+
         </section>
 
         <div className={styles.card}>
