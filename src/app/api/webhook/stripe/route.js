@@ -3,11 +3,14 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
-    console.log('--- STRIPE WEBHOOK START ---');
+    console.log('--- FINAL WEBHOOK DEBUG START ---');
 
     try {
         const body = await req.text();
-        const signature = req.headers.get('stripe-signature');
+        // Acesso ultra-direto ao header para evitar qualquer confusão com next/headers
+        const sig = req.headers.get('stripe-signature');
+
+        console.log('Signature received:', sig ? '✅ Yes' : '❌ No');
 
         console.log('Checking Environment Variables:');
         console.log('- STRIPE_WEBHOOK_SECRET:', process.env.STRIPE_WEBHOOK_SECRET ? '✅ Present' : '❌ MISSING');
