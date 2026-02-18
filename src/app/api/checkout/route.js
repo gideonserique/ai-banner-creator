@@ -13,17 +13,27 @@ export async function POST(req) {
             payment_method_types: ['card'],
             line_items: [
                 {
-                    price_data: {
-                        currency: 'brl',
-                        product_data: {
-                            name: 'BannerIA Premium',
-                            description: 'Banners ilimitados e suporte VIP.',
-                        },
-                        unit_amount: 2990, // R$ 29,90
-                        recurring: {
-                            interval: 'month',
-                        },
-                    },
+                    // Prioridade 1: Usar um Price ID fixo (Recomendado para assinaturas)
+                    ...(process.env.STRIPE_PRICE_ID
+                        ? { price: process.env.STRIPE_PRICE_ID }
+                        : {
+                            // Prioridade 2: Usar dados dinâmicos (mas pode ser vinculado a um produto fixo via ID)
+                            price_data: {
+                                currency: 'brl',
+                                product: process.env.STRIPE_PRODUCT_ID || undefined,
+                                ...(process.env.STRIPE_PRODUCT_ID ? {} : {
+                                    product_data: {
+                                        name: 'BannerIA Premium',
+                                        description: 'Banners ilimitados e suporte VIP.',
+                                    },
+                                }),
+                                unit_amount: 2990, // R$ 29,90
+                                recurring: {
+                                    interval: 'month',
+                                },
+                            },
+                        }
+                    ),
                     quantity: 1,
                 },
             ],
