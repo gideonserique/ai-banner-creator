@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -11,7 +12,7 @@ const SOCIAL_SIZES = {
 
 export async function POST(request) {
   try {
-    const { prompt, size = 'square', images = [], logoUrl = '', companyName = '' } = await request.json();
+    const { prompt, size = 'square', images = [], logoUrl = '', companyName = '', userId = '' } = await request.json();
     const dimensions = SOCIAL_SIZES[size] || SOCIAL_SIZES.square;
 
     if (!process.env.GEMINI_API_KEY) {
@@ -70,6 +71,7 @@ REGRAS CRÍTICAS DE DESIGN:
       async start(controller) {
         let fullText = '';
         let foundImage = false;
+        let finalImageData = null;
 
         try {
           for await (const chunk of result.stream) {
@@ -79,6 +81,7 @@ REGRAS CRÍTICAS DE DESIGN:
                 if (part.inlineData?.data) {
                   const mime = part.inlineData.mimeType || 'image/jpeg';
                   const data = `data:${mime};base64,${part.inlineData.data.trim()}`;
+                  finalImageData = data;
                   controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
                   foundImage = true;
                 } else if (part.text) {
@@ -101,18 +104,34 @@ REGRAS CRÍTICAS DE DESIGN:
               cleanM = cleanM.replace(/[\r\n\s]/g, '');
               const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
               const data = `data:${mime};base64,${cleanM}`;
+              finalImageData = data;
               controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
               foundImage = true;
+            }
+          }
+
+          // SERVER-SIDE AUTO SAVE: Se estiver logado, salvamos direto na galeria
+          if (foundImage && userId) {
+            console.log(`[SERVER-SAVE] Saving banner for user: ${userId}`);
+            const { error: saveError } = await supabaseAdmin.from('banners').insert([
+              {
+                user_id: userId,
+                image_url: finalImageData,
+                prompt: prompt,
+                size: size,
+              },
+            ]);
+
+            if (saveError) {
+              console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
+            } else {
+              console.log('[SERVER-SAVE] Banner successfully saved in background.');
             }
           }
 
           if (!foundImage) {
             console.error('EXTRACTION FAILED.');
             console.log('AI Response Text Length:', fullText.length);
-            if (fullText.length > 0) {
-              console.log('AI Response Sample (First 500 chars):', fullText.substring(0, 500));
-              console.log('AI Response Sample (Last 500 chars):', fullText.substring(fullText.length - 500));
-            }
             controller.enqueue(new TextEncoder().encode(JSON.stringify({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }) + '\n'));
           }
 

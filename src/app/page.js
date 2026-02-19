@@ -77,6 +77,13 @@ export default function HomePage() {
             setPrompt(data.prompt || '');
             setSelectedSize(data.selectedSize || 'square');
             setImages(data.images || []);
+
+            // AUTO-SAVE: Se restauramos um banner e o user agora está logado, 
+            // salvamos na galeria dele imediatamente se ele veio de um guest flow.
+            if (data.variations && data.variations.length > 0) {
+              saveBanner(data.variations[0].url, data.selectedSize || 'square', data.prompt || '');
+            }
+
             // Clear from storage after restoration
             localStorage.removeItem('banneria_pending_session');
             setGuestMode(true); // Ensure they can see the results
@@ -93,6 +100,16 @@ export default function HomePage() {
       setUser(currentUser);
       if (currentUser) fetchProfile(currentUser.id);
     });
+
+    // REFRESH RESILIENCE: Check if a generation was in progress
+    const generatingSince = localStorage.getItem('banneria_generating_timestamp');
+    if (generatingSince) {
+      const diff = Date.now() - parseInt(generatingSince);
+      if (diff < 120000) { // 2 minutos
+        setError('Você tinha uma geração em andamento! Ela está sendo processada no servidor e aparecerá na sua Galeria em instantes. 🚀');
+      }
+      localStorage.removeItem('banneria_generating_timestamp');
+    }
 
     return () => subscription.unsubscribe();
   }, []);
@@ -142,6 +159,9 @@ export default function HomePage() {
 
     // Se guestMode estiver ativo, permitimos gerar mas o modal voltará no download
     setLoading(true);
+    if (user) {
+      localStorage.setItem('banneria_generating_timestamp', Date.now().toString());
+    }
     setVariations([]);
     setProgress(10);
     setError(null);
@@ -157,7 +177,8 @@ export default function HomePage() {
           size: generationSize,
           images,
           logoUrl: userData.logoUrl,
-          companyName: userData.companyName
+          companyName: userData.companyName,
+          userId: user?.id
         }),
       });
 
@@ -208,9 +229,12 @@ export default function HomePage() {
       }
       setProgress(100);
 
-      // Save to Supabase if logged in
+      // AUTO-SAVE: Se estiver logado, o servidor já salvou o banner em segundo plano
+      // via SUPABASE_SERVICE_ROLE_KEY no endpoint /api/generate.
+      // O cliente apenas atualiza a contagem local.
       if (user && accumulated.length > 0) {
-        await saveBanner(accumulated[0].url, generationSize, prompt);
+        // Aguardamos um pouco para o trigger no banco processar
+        setTimeout(() => fetchProfile(user.id), 2000);
       }
 
       setTimeout(() => {
@@ -223,6 +247,7 @@ export default function HomePage() {
       setTimeout(() => {
         setLoading(false);
         setProgress(0);
+        localStorage.removeItem('banneria_generating_timestamp');
       }, 500);
     }
   };

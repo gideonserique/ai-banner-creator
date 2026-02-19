@@ -166,6 +166,27 @@ export default function GalleryPage() {
                     <p className={styles.heroSub}>Todas as suas criações gastronômicas em um só lugar.</p>
                 </section>
 
+                <div
+                    style={{
+                        background: 'rgba(245, 158, 11, 0.05)',
+                        border: '1px dashed var(--accent)',
+                        borderRadius: '12px',
+                        padding: '15px',
+                        marginBottom: '30px',
+                        textAlign: 'center',
+                        fontSize: '14px',
+                        color: 'var(--text-secondary)'
+                    }}
+                >
+                    ✨ **Dica**: Se você acabou de gerar um banner, ele aparecerá aqui automaticamente em alguns segundos.
+                    <button
+                        onClick={() => { setLoading(true); fetchBanners(user.id); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', marginLeft: '10px', textDecoration: 'underline' }}
+                    >
+                        Atualizar agora
+                    </button>
+                </div>
+
                 {error && (
                     <div className={styles.errorMessage} style={{ marginBottom: '30px', textAlign: 'center' }}>
                         {error}
