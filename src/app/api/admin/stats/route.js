@@ -40,8 +40,8 @@ export async function GET(request) {
         // 3. Fetch all profiles (excluding admin)
         let profilesQuery = supabaseAdmin
             .from('profiles')
-            .select('id, full_name, company_name, subscription_tier, generations_count, created_at, updated_at, whatsapp')
-            .order('created_at', { ascending: false });
+            .select('id, full_name, company_name, subscription_tier, generations_count, updated_at, whatsapp, logo_url')
+            .order('updated_at', { ascending: false });
         if (adminId) profilesQuery = profilesQuery.neq('id', adminId);
         const { data: profiles = [], error: profilesError } = await profilesQuery;
         if (profilesError) {
@@ -128,7 +128,7 @@ export async function GET(request) {
         // --- Daily chart data (last 30 days) ---
         const usersByDay = {};
         profiles.forEach(p => {
-            const d = new Date(p.created_at);
+            const d = new Date(p.updated_at);
             if (d >= thirtyDaysAgo) {
                 const key = d.toISOString().slice(0, 10);
                 usersByDay[key] = (usersByDay[key] || 0) + 1;
@@ -178,7 +178,7 @@ export async function GET(request) {
         const totalBanners = banners.length;
         const totalCaptions = banners.filter(b => b.caption).length;
         const avgBannersPerUser = totalUsers > 0 ? (totalBanners / totalUsers).toFixed(1) : 0;
-        const newUsersLast7d = profiles.filter(p => new Date(p.created_at) >= sevenDaysAgo).length;
+        const newUsersLast7d = profiles.filter(p => new Date(p.updated_at) >= sevenDaysAgo).length;
         const newBannersLast7d = banners.filter(b => new Date(b.created_at) >= sevenDaysAgo).length;
         const usersWithBanners = new Set(banners.map(b => b.user_id));
         const usersWithNoBanners = profiles.filter(p => !usersWithBanners.has(p.id)).length;
