@@ -19,6 +19,8 @@ export default function GalleryPage() {
     const [generatingCaption, setGeneratingCaption] = useState(null); // ID do banner sendo processado
     const [sharingBanner, setSharingBanner] = useState(null); // Banner sendo preparado para compartilhar
     const [showCaptionPrompt, setShowCaptionPrompt] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', id: null }); // type: 'banner' ou 'caption'
+    const [editingCaption, setEditingCaption] = useState({ id: null, text: '' });
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -129,8 +131,6 @@ export default function GalleryPage() {
     };
 
     const handleDeleteCaption = async (id) => {
-        if (!window.confirm('Excluir esta legenda? A imagem continuará na galeria.')) return;
-
         try {
             const { error } = await supabase
                 .from('banners')
@@ -139,15 +139,30 @@ export default function GalleryPage() {
 
             if (error) throw error;
             setBanners(prev => prev.map(b => b.id === id ? { ...b, caption: null } : b));
+            setConfirmDelete({ show: false, type: '', id: null });
         } catch (err) {
             console.error('Erro ao excluir legenda:', err);
             alert('Erro ao excluir legenda.');
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Excluir este banner permanentemente?')) return;
+    const handleUpdateCaption = async (id, newText) => {
+        try {
+            const { error } = await supabase
+                .from('banners')
+                .update({ caption: newText })
+                .eq('id', id);
 
+            if (error) throw error;
+            setBanners(prev => prev.map(b => b.id === id ? { ...b, caption: newText } : b));
+            setEditingCaption({ id: null, text: '' });
+        } catch (err) {
+            console.error('Erro ao salvar legenda:', err);
+            alert('Erro ao salvar sua edição.');
+        }
+    };
+
+    const handleDelete = async (id) => {
         try {
             const { error } = await supabase
                 .from('banners')
@@ -156,6 +171,7 @@ export default function GalleryPage() {
 
             if (error) throw error;
             setBanners(prev => prev.filter(b => b.id !== id));
+            setConfirmDelete({ show: false, type: '', id: null });
         } catch (err) {
             console.error('Erro ao excluir:', err);
             alert('Erro ao excluir banner.');
@@ -214,6 +230,30 @@ export default function GalleryPage() {
                 </div>
             )}
 
+            {confirmDelete.show && (
+                <div className={styles.modalOverlay} onClick={() => setConfirmDelete({ show: false, id: null, type: '' })}>
+                    <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+                        <h2 className={styles.authTitle} style={{ fontSize: '20px', color: 'var(--danger)' }}>Confirmar Exclusão ⚠️</h2>
+                        <p className={styles.heroSub} style={{ fontSize: '15px' }}>
+                            {confirmDelete.type === 'banner'
+                                ? 'Isso apagará o banner e a legenda para sempre. Continuar?'
+                                : 'A legenda será apagada, mas a imagem continuará na galeria.'}
+                        </p>
+                        <div className={styles.modalActions} style={{ marginTop: '20px' }}>
+                            <button
+                                className={styles.dangerBtn}
+                                style={{ flex: 1 }}
+                                onClick={() => confirmDelete.type === 'banner' ? handleDelete(confirmDelete.id) : handleDeleteCaption(confirmDelete.id)}
+                            >
+                                Sim, Excluir
+                            </button>
+                            <button className={styles.secondaryBtn} style={{ flex: 1 }} onClick={() => setConfirmDelete({ show: false, id: null, type: '' })}>
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {showCaptionPrompt && sharingBanner && (
                 <div className={styles.modalOverlay} onClick={() => setShowCaptionPrompt(false)}>
                     <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -369,32 +409,89 @@ export default function GalleryPage() {
 
                                 {b.caption ? (
                                     <div style={{ position: 'relative', marginTop: '12px' }}>
-                                        <div style={{
-                                            fontSize: '11px',
-                                            background: 'rgba(255,255,255,0.03)',
-                                            padding: '8px',
-                                            borderRadius: '6px',
-                                            height: '60px',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 3,
-                                            WebkitBoxOrient: 'vertical',
-                                            lineHeight: '1.4'
-                                        }}>
-                                            {b.caption}
-                                        </div>
-                                        <button
-                                            onClick={() => handleDeleteCaption(b.id)}
-                                            style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--danger)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', color: '#fff', cursor: 'pointer' }}
-                                        >
-                                            ×
-                                        </button>
+                                        {editingCaption.id === b.id ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <textarea
+                                                    autoFocus
+                                                    className={styles.input}
+                                                    style={{
+                                                        fontSize: '11px',
+                                                        height: '100px',
+                                                        resize: 'none',
+                                                        padding: '10px',
+                                                        background: 'rgba(255,255,255,0.06)'
+                                                    }}
+                                                    value={editingCaption.text}
+                                                    onChange={(e) => setEditingCaption({ ...editingCaption, text: e.target.value })}
+                                                />
+                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                    <button
+                                                        className={styles.primaryBtn}
+                                                        style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                                                        onClick={() => handleUpdateCaption(b.id, editingCaption.text)}
+                                                    >
+                                                        Salvar
+                                                    </button>
+                                                    <button
+                                                        className={styles.secondaryBtn}
+                                                        style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                                                        onClick={() => setEditingCaption({ id: null, text: '' })}
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => setEditingCaption({ id: b.id, text: b.caption })}
+                                                style={{
+                                                    fontSize: '11px',
+                                                    background: 'rgba(255,158,11,0.08)',
+                                                    border: '1px solid rgba(255,158,11,0.2)',
+                                                    padding: '12px',
+                                                    borderRadius: '8px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    lineHeight: '1.4',
+                                                    cursor: 'pointer',
+                                                    position: 'relative',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                                title="Clique para editar a legenda"
+                                            >
+                                                {b.caption}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDelete({ show: true, type: 'caption', id: b.id });
+                                                    }}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '-10px',
+                                                        right: '-10px',
+                                                        background: 'var(--danger)',
+                                                        border: '2px solid var(--bg)',
+                                                        borderRadius: '50%',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        fontSize: '12px',
+                                                        color: '#fff',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                                    }}
+                                                    title="Excluir Legenda"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <button
                                         className={styles.secondaryBtn}
-                                        style={{ width: '100%', padding: '6px', fontSize: '12px', marginTop: '12px', borderStyle: 'dashed' }}
+                                        style={{ width: '100%', padding: '8px', fontSize: '12px', marginTop: '12px', borderStyle: 'dashed' }}
                                         onClick={() => handleGenerateCaption(b.id, b.prompt)}
                                         disabled={generatingCaption === b.id}
                                     >
@@ -402,28 +499,28 @@ export default function GalleryPage() {
                                     </button>
                                 )}
 
-                                <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', opacity: 0.6 }}>
+                                <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '12px', opacity: 0.6, fontStyle: 'italic' }}>
                                     Briefing: {b.prompt}
                                 </p>
                                 <div className={styles.actionGroup} style={{ marginTop: '12px' }}>
                                     <button
                                         className={styles.selectBtn}
-                                        style={{ flex: 1, padding: '8px' }}
+                                        style={{ flex: 1, padding: '10px' }}
                                         onClick={() => handleDownload(b.image_url, b.size, b.id)}
                                     >
                                         Baixar
                                     </button>
                                     <button
                                         className={styles.shareBtn}
-                                        style={{ flex: 1, padding: '8px' }}
+                                        style={{ flex: 1, padding: '10px' }}
                                         onClick={() => handleShare(b)}
                                     >
                                         Compartilhar
                                     </button>
                                     <button
                                         className={styles.dangerBtn}
-                                        style={{ padding: '8px', fontSize: '12px', minWidth: '40px' }}
-                                        onClick={() => handleDelete(b.id)}
+                                        style={{ padding: '10px', fontSize: '14px', minWidth: '45px' }}
+                                        onClick={() => setConfirmDelete({ show: true, type: 'banner', id: b.id })}
                                         title="Excluir Banner"
                                     >
                                         🗑️
