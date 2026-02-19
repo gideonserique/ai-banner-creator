@@ -46,8 +46,10 @@ export async function POST(request) {
     });
 
     const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL: Use o logotipo fornecido nos anexos de forma natural e profissional em um dos cantos ou no centro inferior do banner.`
-      : (companyName ? `IDENTIDADE VISUAL: Inclua o nome da empresa "${companyName}" no banner com uma tipografia elegante e gastronômica que combine com o design.` : '');
+      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Use o logotipo fornecido nos anexos de forma natural e profissional (geralmente nos cantos ou centro inferior). 
+         DIRETRIZ DE CORES: Use a paleta de cores do logotipo como base para o design do banner (fundos, textos e grafismos). 
+         NOTA: Se o BRIEFING do usuário mencionar cores específicas, as cores do briefing têm PRIORIDADE TOTAL sobre as cores do logo.`
+      : (companyName ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Exiba o nome da empresa "${companyName}" de forma clara e elegante, usando uma tipografia premium que harmonize com o estilo do banner.` : '');
 
     const systemPrompt = `Você é um Diretor de Arte Gastronômico de Classe Mundial especializado em publicidade para alta gastronomia.
 Sua tarefa é gerar 1 ÚNICO banner publicitário de resolução 4K (${dimensions.width}x${dimensions.height}) seguindo o briefing abaixo.

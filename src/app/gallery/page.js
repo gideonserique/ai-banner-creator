@@ -16,6 +16,9 @@ export default function GalleryPage() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
     const [previewBanner, setPreviewBanner] = useState(null);
+    const [generatingCaption, setGeneratingCaption] = useState(null); // ID do banner sendo processado
+    const [sharingBanner, setSharingBanner] = useState(null); // Banner sendo preparado para compartilhar
+    const [showCaptionPrompt, setShowCaptionPrompt] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -56,7 +59,19 @@ export default function GalleryPage() {
         link.click();
     };
 
-    const handleShare = async (base64, size) => {
+    const handleShare = async (banner) => {
+        // Se já tem legenda, compartilha direto
+        if (banner.caption) {
+            executeShare(banner.image_url, banner.size, banner.caption);
+            return;
+        }
+
+        // Se não tem legenda, abre o modal de sugestão
+        setSharingBanner(banner);
+        setShowCaptionPrompt(true);
+    };
+
+    const executeShare = async (base64, size, caption = '') => {
         try {
             const res = await fetch(base64);
             const blob = await res.blob();
@@ -66,12 +81,67 @@ export default function GalleryPage() {
                 await navigator.share({
                     files: [file],
                     title: 'Meu Banner de Restaurante',
+                    text: caption || 'Confira esse banner que gerei no BannerIA! 🍕✨',
                 });
             } else {
                 alert('Compartilhamento não suportado neste navegador. Tente baixar a imagem.');
             }
         } catch (err) {
             console.error('Erro ao compartilhar:', err);
+        }
+    };
+
+    const handleGenerateCaption = async (id, prompt) => {
+        setGeneratingCaption(id);
+        try {
+            const response = await fetch('/api/caption', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt }),
+            });
+
+            const data = await response.json();
+            if (data.caption) {
+                // Salvar no Banco de Dados
+                const { error: updateError } = await supabase
+                    .from('banners')
+                    .update({ caption: data.caption })
+                    .eq('id', id);
+
+                if (updateError) throw updateError;
+
+                // Atualizar estado local
+                setBanners(prev => prev.map(b => b.id === id ? { ...b, caption: data.caption } : b));
+
+                // Se estiver no fluxo de compartilhamento, atualiza o banner sendo compartilhado
+                if (sharingBanner?.id === id) {
+                    setSharingBanner({ ...sharingBanner, caption: data.caption });
+                }
+            } else {
+                throw new Error(data.error || 'Erro ao gerar legenda');
+            }
+        } catch (err) {
+            console.error('Erro de legenda:', err);
+            alert('Não foi possível gerar a legenda no momento.');
+        } finally {
+            setGeneratingCaption(null);
+        }
+    };
+
+    const handleDeleteCaption = async (id) => {
+        if (!window.confirm('Excluir esta legenda? A imagem continuará na galeria.')) return;
+
+        try {
+            const { error } = await supabase
+                .from('banners')
+                .update({ caption: null })
+                .eq('id', id);
+
+            if (error) throw error;
+            setBanners(prev => prev.map(b => b.id === id ? { ...b, caption: null } : b));
+        } catch (err) {
+            console.error('Erro ao excluir legenda:', err);
+            alert('Erro ao excluir legenda.');
         }
     };
 
@@ -140,6 +210,75 @@ export default function GalleryPage() {
                             </button>
                         </div>
                         <button className={styles.closeModal} onClick={() => setPreviewBanner(null)}>×</button>
+                    </div>
+                </div>
+            )}
+
+            {showCaptionPrompt && sharingBanner && (
+                <div className={styles.modalOverlay} onClick={() => setShowCaptionPrompt(false)}>
+                    <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <h2 className={styles.authTitle} style={{ fontSize: '24px' }}>Legenda com IA 🤖</h2>
+
+                        {sharingBanner.caption ? (
+                            <>
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    whiteSpace: 'pre-wrap',
+                                    marginBottom: '20px',
+                                    maxHeight: '300px',
+                                    overflowY: 'auto',
+                                    textAlign: 'left'
+                                }}>
+                                    {sharingBanner.caption}
+                                </div>
+                                <div className={styles.modalActions}>
+                                    <button
+                                        className={styles.primaryBtn}
+                                        onClick={() => {
+                                            executeShare(sharingBanner.image_url, sharingBanner.size, sharingBanner.caption);
+                                            setShowCaptionPrompt(false);
+                                        }}
+                                    >
+                                        Compartilhar com Legenda
+                                    </button>
+                                    <button
+                                        className={styles.secondaryBtn}
+                                        onClick={() => handleGenerateCaption(sharingBanner.id, sharingBanner.prompt)}
+                                        disabled={generatingCaption === sharingBanner.id}
+                                    >
+                                        {generatingCaption === sharingBanner.id ? 'Gerando...' : '🔄 Regerar'}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className={styles.heroSub} style={{ fontSize: '16px' }}>
+                                    Quer criar uma legenda persuasiva com IA para acompanhar sua arte?
+                                </p>
+                                <div className={styles.modalActions} style={{ marginTop: '30px' }}>
+                                    <button
+                                        className={styles.primaryBtn}
+                                        onClick={() => handleGenerateCaption(sharingBanner.id, sharingBanner.prompt)}
+                                        disabled={generatingCaption === sharingBanner.id}
+                                    >
+                                        {generatingCaption === sharingBanner.id ? <span className={styles.spinner} /> : '✨ Sim, Gerar Agora'}
+                                    </button>
+                                    <button
+                                        className={styles.secondaryBtn}
+                                        onClick={() => {
+                                            executeShare(sharingBanner.image_url, sharingBanner.size);
+                                            setShowCaptionPrompt(false);
+                                        }}
+                                    >
+                                        Apenas a Imagem
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                        <button className={styles.closeModal} onClick={() => setShowCaptionPrompt(false)}>×</button>
                     </div>
                 </div>
             )}
@@ -227,8 +366,44 @@ export default function GalleryPage() {
                                         style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
                                     />
                                 </div>
-                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {b.prompt}
+
+                                {b.caption ? (
+                                    <div style={{ position: 'relative', marginTop: '12px' }}>
+                                        <div style={{
+                                            fontSize: '11px',
+                                            background: 'rgba(255,255,255,0.03)',
+                                            padding: '8px',
+                                            borderRadius: '6px',
+                                            height: '60px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 3,
+                                            WebkitBoxOrient: 'vertical',
+                                            lineHeight: '1.4'
+                                        }}>
+                                            {b.caption}
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteCaption(b.id)}
+                                            style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--danger)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', color: '#fff', cursor: 'pointer' }}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        className={styles.secondaryBtn}
+                                        style={{ width: '100%', padding: '6px', fontSize: '12px', marginTop: '12px', borderStyle: 'dashed' }}
+                                        onClick={() => handleGenerateCaption(b.id, b.prompt)}
+                                        disabled={generatingCaption === b.id}
+                                    >
+                                        {generatingCaption === b.id ? 'Gerando...' : '✨ Gerar Legenda IA'}
+                                    </button>
+                                )}
+
+                                <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', opacity: 0.6 }}>
+                                    Briefing: {b.prompt}
                                 </p>
                                 <div className={styles.actionGroup} style={{ marginTop: '12px' }}>
                                     <button
@@ -241,7 +416,7 @@ export default function GalleryPage() {
                                     <button
                                         className={styles.shareBtn}
                                         style={{ flex: 1, padding: '8px' }}
-                                        onClick={() => handleShare(b.image_url, b.size)}
+                                        onClick={() => handleShare(b)}
                                     >
                                         Compartilhar
                                     </button>
