@@ -101,27 +101,31 @@ export default function SignupPage() {
         }
 
         try {
-            // 1. Sign up the user
+            // 1. Sign up the user with metadata (trigger will use this)
             const { data: { user }, error: authError } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
+                options: {
+                    data: {
+                        full_name: formData.fullName,
+                    }
+                }
             });
 
             if (authError) throw authError;
 
             if (user) {
-                // 2. Insert extra profile data
+                // 2. Upsert extra profile data (using upsert to avoid duplicate key error with trigger)
                 const { error: profileError } = await supabase
                     .from('profiles')
-                    .insert([
-                        {
-                            id: user.id,
-                            full_name: formData.fullName,
-                            company_name: formData.companyName,
-                            whatsapp: formData.whatsapp,
-                            logo_url: formData.logoUrl,
-                        },
-                    ]);
+                    .upsert({
+                        id: user.id,
+                        full_name: formData.fullName,
+                        company_name: formData.companyName,
+                        whatsapp: formData.whatsapp,
+                        logo_url: formData.logoUrl,
+                        updated_at: new Date().toISOString(),
+                    });
 
                 if (profileError) throw profileError;
 
