@@ -122,7 +122,7 @@ export default function GalleryPage() {
             }
         } catch (err) {
             console.error('Erro de legenda:', err);
-            alert('Não foi possível gerar a legenda no momento.');
+            alert(`Erro: ${err.message}`);
         } finally {
             setGeneratingCaption(null);
         }

@@ -16,7 +16,9 @@ export async function POST(request) {
         }
 
         console.log('[CAPTION-API] Generating caption for prompt:', prompt.substring(0, 50) + '...');
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        // Tentando gemini-pro que é o modelo de texto mais estável e universal
+        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
         const systemPrompt = `Você é um Copywriter Especialista em Gastronomia de alto nível.
 Sua tarefa é criar uma legenda persuasiva e atraente para uma publicação no Instagram e WhatsApp, baseada no briefing do usuário.
@@ -39,12 +41,16 @@ BRIEFING: "${prompt}"`;
         const response = await result.response;
         const text = response.text();
 
+        if (!text) {
+            throw new Error('O modelo não retornou nenhum texto.');
+        }
+
         return NextResponse.json({ caption: text.trim() });
 
     } catch (error) {
         console.error('Erro na geração de legenda:', error);
         return NextResponse.json({
-            error: `Erro ao gerar legenda: ${error.message}.`
+            error: error.message || 'Erro desconhecido na IA'
         }, { status: 500 });
     }
 }
