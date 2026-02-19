@@ -130,6 +130,17 @@ export default function GalleryPage() {
         }
     };
 
+    const handleCopyCaption = (text) => {
+        navigator.clipboard.writeText(text);
+        // Usando um efeito visual simples em vez de alert
+        const btn = document.activeElement;
+        const originalText = btn.innerText;
+        btn.innerText = 'Copiado! ✅';
+        setTimeout(() => {
+            if (btn) btn.innerText = originalText;
+        }, 2000);
+    };
+
     const handleDeleteCaption = async (id) => {
         try {
             const { error } = await supabase
@@ -285,6 +296,12 @@ export default function GalleryPage() {
                                         Compartilhar com Legenda
                                     </button>
                                     <button
+                                        className={styles.selectBtn}
+                                        onClick={() => handleCopyCaption(sharingBanner.caption)}
+                                    >
+                                        📋 Copiar Legenda
+                                    </button>
+                                    <button
                                         className={styles.secondaryBtn}
                                         onClick={() => handleGenerateCaption(sharingBanner.id, sharingBanner.prompt)}
                                         disabled={generatingCaption === sharingBanner.id}
@@ -407,7 +424,7 @@ export default function GalleryPage() {
                                     />
                                 </div>
 
-                                {b.caption ? (
+                                {b.caption && (
                                     <div style={{ position: 'relative', marginTop: '12px' }}>
                                         {editingCaption.id === b.id ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -454,49 +471,72 @@ export default function GalleryPage() {
                                                     lineHeight: '1.4',
                                                     cursor: 'pointer',
                                                     position: 'relative',
-                                                    transition: 'all 0.2s ease'
+                                                    transition: 'all 0.2s ease',
+                                                    minHeight: '40px'
                                                 }}
                                                 title="Clique para editar a legenda"
                                             >
                                                 {b.caption}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setConfirmDelete({ show: true, type: 'caption', id: b.id });
-                                                    }}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '-10px',
-                                                        right: '-10px',
-                                                        background: 'var(--danger)',
-                                                        border: '2px solid var(--bg)',
-                                                        borderRadius: '50%',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        fontSize: '12px',
-                                                        color: '#fff',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                                                    }}
-                                                    title="Excluir Legenda"
-                                                >
-                                                    🗑️
-                                                </button>
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '-10px',
+                                                    right: '-10px',
+                                                    display: 'flex',
+                                                    gap: '5px'
+                                                }}>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCopyCaption(b.caption);
+                                                        }}
+                                                        style={{
+                                                            background: 'var(--accent)',
+                                                            border: '2px solid var(--bg)',
+                                                            borderRadius: '50%',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            fontSize: '12px',
+                                                            color: '#fff',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                                        }}
+                                                        title="Copiar Legenda"
+                                                    >
+                                                        📋
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setConfirmDelete({ show: true, type: 'caption', id: b.id });
+                                                        }}
+                                                        style={{
+                                                            background: '#451a1a', // Tom de vermelho mais escuro/premium para o cesto
+                                                            border: '2px solid var(--bg)',
+                                                            borderRadius: '12px', // Mais quadradinho como no anexo
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            fontSize: '14px',
+                                                            color: '#ff4d4d',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.background = '#632525'}
+                                                        onMouseOut={(e) => e.currentTarget.style.background = '#451a1a'}
+                                                        title="Excluir Legenda"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
-                                ) : (
-                                    <button
-                                        className={styles.secondaryBtn}
-                                        style={{ width: '100%', padding: '8px', fontSize: '12px', marginTop: '12px', borderStyle: 'dashed' }}
-                                        onClick={() => handleGenerateCaption(b.id, b.prompt)}
-                                        disabled={generatingCaption === b.id}
-                                    >
-                                        {generatingCaption === b.id ? 'Gerando...' : '✨ Gerar Legenda IA'}
-                                    </button>
                                 )}
 
                                 <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '12px', opacity: 0.6, fontStyle: 'italic' }}>
