@@ -1,6 +1,7 @@
 import Script from 'next/script';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
+import PageViewTracker from '@/components/PageViewTracker';
 
 export const metadata = {
   // ... existing metadata
@@ -37,6 +38,7 @@ export default function RootLayout({ children }) {
         </Script>
       </head>
       <body>
+        <PageViewTracker />
         {children}
         <BottomNav />
       </body>
