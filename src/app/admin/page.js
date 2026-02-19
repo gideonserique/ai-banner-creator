@@ -85,6 +85,9 @@ export default function AdminDashboard() {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
+    const [deleting, setDeleting] = useState(false);
+    const [deleteMsg, setDeleteMsg] = useState('');
 
     useEffect(() => { checkAndFetch(); }, []);
 
@@ -106,6 +109,36 @@ export default function AdminDashboard() {
             setError(e.message);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleDeleteUser() {
+        if (!deleteConfirm) return;
+        setDeleting(true);
+        setDeleteMsg('');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/delete-user', {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: deleteConfirm.id }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Erro ao excluir');
+            // Remove from local state
+            setData(prev => ({
+                ...prev,
+                profiles: prev.profiles.filter(p => p.id !== deleteConfirm.id),
+                kpis: { ...prev.kpis, totalUsers: prev.kpis.totalUsers - 1 },
+            }));
+            setDeleteConfirm(null);
+        } catch (e) {
+            setDeleteMsg(e.message);
+        } finally {
+            setDeleting(false);
         }
     }
 
@@ -251,7 +284,7 @@ export default function AdminDashboard() {
                                     <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(239,68,68,0.05)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.1)' }}>
                                         <div>
                                             <div style={{ fontSize: '12px', fontWeight: 600 }}>{p.company_name || p.full_name || 'Usuário'}</div>
-                                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{p.updated_at ? new Date(p.updated_at).toLocaleDateString('pt-BR') : ''}</div>
                                         </div>
                                         {p.whatsapp && (
                                             <a href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#22c55e', textDecoration: 'none', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '3px 8px', borderRadius: '10px' }}>
@@ -339,8 +372,8 @@ export default function AdminDashboard() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                        {['Empresa / Nome', 'Plano', 'Banners', 'WhatsApp', 'Cadastro'].map(h => (
-                                            <th key={h} style={{ padding: '10px 18px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
+                                        {['Empresa / Nome', 'Plano', 'Banners', 'WhatsApp', 'Atualizado', ''].map((h, i) => (
+                                            <th key={i} style={{ padding: '10px 18px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -361,12 +394,58 @@ export default function AdminDashboard() {
                                             </td>
                                             <td style={{ padding: '10px 18px', color: 'var(--text-secondary)', fontSize: '12px' }}>{p.whatsapp || '—'}</td>
                                             <td style={{ padding: '10px 18px', color: 'var(--text-secondary)', fontSize: '11px', whiteSpace: 'nowrap' }}>
-                                                {new Date(p.created_at).toLocaleDateString('pt-BR')}
+                                                {p.updated_at ? new Date(p.updated_at).toLocaleDateString('pt-BR') : '—'}
+                                            </td>
+                                            <td style={{ padding: '10px 14px' }}>
+                                                <button
+                                                    onClick={() => setDeleteConfirm({ id: p.id, name: p.company_name || p.full_name || 'Usuário' })}
+                                                    title="Excluir usuário"
+                                                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}
+                                                    onMouseEnter={e => { e.target.style.background = 'rgba(239,68,68,0.18)'; }}
+                                                    onMouseLeave={e => { e.target.style.background = 'rgba(239,68,68,0.08)'; }}
+                                                >
+                                                    🗑️ Excluir
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {deleteConfirm && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '20px', padding: '32px', maxWidth: '380px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+                            <div style={{ fontSize: '28px', marginBottom: '12px' }}>🗑️</div>
+                            <div style={{ fontWeight: 800, fontSize: '18px', marginBottom: '8px' }}>Excluir usuário?</div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                Isso vai remover <strong style={{ color: 'var(--text-primary)' }}>{deleteConfirm.name}</strong> permanentemente:
+                            </div>
+                            <ul style={{ fontSize: '12px', color: '#ef4444', paddingLeft: '18px', marginBottom: '20px', lineHeight: 1.8 }}>
+                                <li>Perfil (profiles)</li>
+                                <li>Todos os banners gerados</li>
+                                <li>Conta de autenticação (auth.users)</li>
+                            </ul>
+                            {deleteMsg && <div style={{ color: '#ef4444', fontSize: '12px', marginBottom: '12px', padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px' }}>⚠️ {deleteMsg}</div>}
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => { setDeleteConfirm(null); setDeleteMsg(''); }}
+                                    disabled={deleting}
+                                    style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleDeleteUser}
+                                    disabled={deleting}
+                                    style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '13px', opacity: deleting ? 0.6 : 1 }}
+                                >
+                                    {deleting ? 'Excluindo...' : 'Sim, excluir'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
