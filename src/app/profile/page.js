@@ -234,7 +234,7 @@ export default function ProfilePage() {
                 {/* Seção de Planos */}
                 <div style={{ marginBottom: '40px' }}>
                     <h2 className={styles.cardLabel} style={{ marginBottom: '20px', fontSize: '20px' }}>Seu Plano Atual</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className={styles.responsiveGrid}>
+                    <div className={styles.responsiveGrid} style={{ gap: '20px' }}>
                         <div className={styles.card} style={{ border: profile.subscription_tier === 'free' ? '2px solid var(--accent)' : '1px solid var(--border)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h3 style={{ fontSize: '22px', margin: 0 }}>Gratuito</h3>
@@ -288,7 +288,7 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'start' }} className={styles.responsiveGrid}>
+                <div className={styles.responsiveGrid} style={{ gap: '30px', alignItems: 'start' }}>
                     {/* Coluna 1: Dados Pessoais e Logo */}
                     <div className={styles.card}>
                         <h2 className={styles.cardLabel} style={{ fontSize: '18px', marginBottom: '10px' }}>Informações da Empresa</h2>

@@ -1,7 +1,9 @@
 import Script from 'next/script';
 import './globals.css';
+import BottomNav from '@/components/BottomNav';
 
 export const metadata = {
+  // ... existing metadata
   title: 'BannerIA - Banners Profissionais para Restaurantes e Lanchonetes',
   description: 'Crie banners profissionais para seu restaurante em segundos. Inteligência Artificial especializada em gastronomia, cardápios e promoções para Instagram e WhatsApp.',
   keywords: 'restaurante, lanchonete, banner, design, cardápio, promoção, instagram, whatsapp, IA, inteligência artificial',
@@ -27,14 +29,17 @@ export default function RootLayout({ children }) {
         <Script id="microsoft-clarity" strategy="afterInteractive">
           {`
             (function(c,l,a,r,i,t,y){
-                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                c[a]=c[a]||function(){c[a].q=c[a].q||[]).push(arguments)};
                 t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
                 y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
             })(window, document, "clarity", "script", "vjlaeypp4b");
           `}
         </Script>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <BottomNav />
+      </body>
     </html>
   );
 }
