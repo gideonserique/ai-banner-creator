@@ -28,6 +28,11 @@ export default function ProfilePage() {
         fetchUserAndProfile();
     }, []);
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+    };
+
     async function fetchUserAndProfile() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -223,6 +228,7 @@ export default function ProfilePage() {
                     <nav className={styles.navButtons}>
                         <Link href="/" className={styles.loginLink}>Home</Link>
                         <Link href="/gallery" className={styles.loginLink}>Galeria</Link>
+                        <button className={styles.loginLink} onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Sair</button>
                     </nav>
                 </header>
 

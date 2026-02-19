@@ -173,6 +173,12 @@ export default function GalleryPage() {
         }
     };
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+    };
+
+
     const handleDelete = async (id) => {
         try {
             const { error } = await supabase
@@ -354,6 +360,7 @@ export default function GalleryPage() {
                     <nav className={styles.navButtons}>
                         <Link href="/" className={styles.loginLink}>Novo Banner</Link>
                         <Link href="/profile" className={styles.loginLink}>Meu Perfil</Link>
+                        <button className={styles.loginLink} onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Sair</button>
                     </nav>
                 </header>
 
