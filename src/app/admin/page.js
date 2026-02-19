@@ -99,8 +99,9 @@ export default function AdminDashboard() {
             const res = await fetch('/api/admin/stats', {
                 headers: { Authorization: `Bearer ${session.access_token}` },
             });
-            if (!res.ok) throw new Error('Acesso negado ou erro no servidor.');
-            setData(await res.json());
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+            setData(json);
         } catch (e) {
             setError(e.message);
         } finally {

@@ -23,9 +23,19 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        // 2. Get admin's own user ID to exclude from stats
-        const { data: adminUser } = await supabaseAdmin.auth.admin.getUserByEmail(ADMIN_EMAIL);
-        const adminId = adminUser?.user?.id;
+        // 2. Get admin's own user ID via profiles table (more reliable than auth.admin API)
+        let adminId = null;
+        try {
+            const { data: adminProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('id', user.id)
+                .single();
+            // Use the verified JWT user ID directly — most reliable
+            adminId = user.id;
+        } catch {
+            adminId = user.id; // Fallback: still use the JWT user ID
+        }
 
         // 3. Fetch all profiles (excluding admin)
         let profilesQuery = supabaseAdmin
@@ -34,7 +44,10 @@ export async function GET(request) {
             .order('created_at', { ascending: false });
         if (adminId) profilesQuery = profilesQuery.neq('id', adminId);
         const { data: profiles = [], error: profilesError } = await profilesQuery;
-        if (profilesError) throw profilesError;
+        if (profilesError) {
+            console.error('[ADMIN-STATS] profiles error:', profilesError);
+            throw new Error(`Profiles query failed: ${profilesError.message}`);
+        }
 
         // 4. Fetch all banners (excluding admin)
         let bannersQuery = supabaseAdmin
@@ -43,15 +56,25 @@ export async function GET(request) {
             .order('created_at', { ascending: false });
         if (adminId) bannersQuery = bannersQuery.neq('user_id', adminId);
         const { data: banners = [], error: bannersError } = await bannersQuery;
-        if (bannersError) throw bannersError;
+        if (bannersError) {
+            console.error('[ADMIN-STATS] banners error:', bannersError);
+            throw new Error(`Banners query failed: ${bannersError.message}`);
+        }
 
-        // 5. Fetch ALL page views (admin excluded client-side via session check)
-        const { data: pageViews = [] } = await supabaseAdmin
-            .from('page_views')
-            .select('session_id, page_path, device_type, user_id, referrer, created_at')
-            .order('created_at', { ascending: false });
+        // 5. Fetch page views — use empty array if table doesn't exist yet
+        let pageViews = [];
+        try {
+            const { data: pvData, error: pvError } = await supabaseAdmin
+                .from('page_views')
+                .select('session_id, page_path, device_type, user_id, referrer, created_at')
+                .order('created_at', { ascending: false });
+            if (!pvError && pvData) pageViews = pvData;
+            else if (pvError) console.warn('[ADMIN-STATS] page_views not ready yet:', pvError.message);
+        } catch (e) {
+            console.warn('[ADMIN-STATS] page_views table missing, skipping.');
+        }
 
-        // Filter out admin's own user_id just in case
+        // Filter out admin's own user_id
         const filteredViews = adminId
             ? pageViews.filter(v => v.user_id !== adminId)
             : pageViews;
