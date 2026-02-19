@@ -452,20 +452,22 @@ export default function HomePage() {
         </section>
 
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardLabel}>Descreva seu prato ou promoção</span>
-            <button className={styles.exampleBtn} onClick={() => setPrompt(EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)])}>
-              ✨ Sugestão
+          <div style={{ position: 'relative' }}>
+            <textarea
+              className={styles.textarea}
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              placeholder="Descreva seu prato ou promoção"
+              rows={3}
+            />
+            <button
+              className={styles.magicSuggestBtn}
+              onClick={() => setPrompt(EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)])}
+              title="Sugerir uma ideia"
+            >
+              ✨
             </button>
           </div>
-
-          <textarea
-            className={styles.textarea}
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder="Ex: Hambúrguer suculento com queijo derretido, iluminação quente, estilo rústico para Instagram..."
-            rows={3}
-          />
 
           <div className={styles.uploadSection}>
             <div className={styles.sizeLabel}>Fotos dos seus Pratos (Opcional)</div>
