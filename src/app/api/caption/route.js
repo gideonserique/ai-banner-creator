@@ -17,8 +17,8 @@ export async function POST(request) {
 
         console.log('[CAPTION-API] Generating caption for prompt:', prompt.substring(0, 50) + '...');
 
-        // Tentando gemini-pro que é o modelo de texto mais estável e universal
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        // Usando o modelo mais recente Gemini 2.0 Flash para máxima performance
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const systemPrompt = `Você é um Copywriter Especialista em Gastronomia de alto nível.
 Sua tarefa é criar uma legenda persuasiva e atraente para uma publicação no Instagram e WhatsApp, baseada no briefing do usuário.
