@@ -49,6 +49,7 @@ export async function POST(req) {
                 },
             ],
             mode: 'subscription',
+            allow_promotion_codes: true, // Habilita o campo de cupom no checkout
             success_url,
             cancel_url,
             customer_email: email,
