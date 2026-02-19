@@ -15,6 +15,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
 
+        console.log('[CAPTION-API] Generating caption for prompt:', prompt.substring(0, 50) + '...');
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const systemPrompt = `Você é um Copywriter Especialista em Gastronomia de alto nível.
