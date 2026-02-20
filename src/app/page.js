@@ -653,62 +653,63 @@ export default function HomePage() {
             </>
           )}
         </button>
+
+        {variations.length > 0 && (
+          <div className={styles.variations} ref={resultsRef}>
+            <h2 className={styles.sectionTitle}>Banner Gerado</h2>
+            <div className={styles.variationsGrid} style={{ maxWidth: '600px', margin: '0 auto' }}>
+              {variations.map((v, i) => (
+                <div key={i} className={styles.variationCard}>
+                  <div className={styles.variationPreview} style={{
+                    aspectRatio: SIZES.find(s => s.id === v.size).dims.replace('×', '/'),
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}>
+                    <img
+                      src={v.url}
+                      alt={`Banner ${i + 1}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '12px',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        pointerEvents: 'none',
+                      }}
+                      draggable={false}
+                      onContextMenu={e => e.preventDefault()}
+                      onDragStart={e => e.preventDefault()}
+                    />
+                    {/* Invisible overlay to block right-click and long-press on mobile */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 1,
+                        WebkitTouchCallout: 'none',
+                        userSelect: 'none',
+                        cursor: 'default',
+                      }}
+                      onContextMenu={e => e.preventDefault()}
+                    />
+                  </div>
+                  <div className={styles.actionGroup}>
+                    <button className={styles.selectBtn} onClick={() => handleDownload(v.url, v.size, i)}>
+                      Baixar Banner
+                    </button>
+                    <button className={styles.shareBtn} onClick={() => handleShare(v.url, v.size)}>
+                      Compartilhar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {variations.length > 0 && (
-        <div className={styles.variations} ref={resultsRef}>
-          <h2 className={styles.sectionTitle}>Banner Gerado</h2>
-          <div className={styles.variationsGrid} style={{ maxWidth: '600px', margin: '0 auto' }}>
-            {variations.map((v, i) => (
-              <div key={i} className={styles.variationCard}>
-                <div className={styles.variationPreview} style={{
-                  aspectRatio: SIZES.find(s => s.id === v.size).dims.replace('×', '/'),
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}>
-                  <img
-                    src={v.url}
-                    alt={`Banner ${i + 1}`}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: '12px',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none',
-                      pointerEvents: 'none',
-                    }}
-                    draggable={false}
-                    onContextMenu={e => e.preventDefault()}
-                    onDragStart={e => e.preventDefault()}
-                  />
-                  {/* Invisible overlay to block right-click and long-press on mobile */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      zIndex: 1,
-                      WebkitTouchCallout: 'none',
-                      userSelect: 'none',
-                      cursor: 'default',
-                    }}
-                    onContextMenu={e => e.preventDefault()}
-                  />
-                </div>
-                <div className={styles.actionGroup}>
-                  <button className={styles.selectBtn} onClick={() => handleDownload(v.url, v.size, i)}>
-                    Baixar Banner
-                  </button>
-                  <button className={styles.shareBtn} onClick={() => handleShare(v.url, v.size)}>
-                    Compartilhar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       {showLimitModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center' }}>
