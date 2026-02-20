@@ -12,26 +12,27 @@ const SIZES = [
 ];
 
 const EXAMPLES = [
-  'Promoção: Hamburguer Duplo + Batata por R$ 39,90. Foto suculenta, iluminação quente, texto "OFERTA DO DIA", WhatsApp (11) 99999-9999',
-  'Cardápio: Prato Executivo de Picanha (Arroz, Feijão, Farofa). Preço: R$ 32,00. Estilo rústico e elegante.',
-  'Combo de Sushi: Barco Premium 40 peças com Salmão e Atum. Tons de preto e dourado, design sofisticado.',
-  'Noite da Pizza: Compre 1 Grande e ganhe 1 brotinho doce. Foto saindo do forno, Endereço: Av. Principal, 500.',
-  'Happy Hour: Balde com 5 Cervejas + Porção de Batata. Foto de bar animado, texto "VEM RELAXAR COM A GENTE!"',
-  'Menu de Sobremesas: Brownie com Sorvete e Calda de Chocolate. Estilo clean, luz suave de estúdio.',
-  'Café da Manhã: Cappuccino + Pão de Queijo por R$ 12,00. Clima aconchegante, mesa de madeira.',
-  'Promoção Delivery: Taxa Grátis até 5km. Foto de prato variado, cores vibrantes para destaque.',
-  'Prato do Chef: Risoto de Camarão com Ervas Finas. Foto high-end, iluminação de restaurante de luxo.',
-  'Festival de Massas: Rodízio de Massas Artesanais. Preços a partir de R$ 45,00. Chamada: "RESERVE SUA MESA!"',
+  'Smartphone Galaxy Pro 256GB. Oferta: R$ 1.899,00. Design clean tech, fundo escuro, destaque na câmera. WhatsApp (11) 99999-9999',
+  'Promoção: Hamburguer Duplo + Batata por R$ 39,90. Texto "OFERTA DO DIA". WhatsApp (11) 99999-9999',
+  'Salão de Beleza: Tintura + Hidratação por R$ 120,00. Estilo elegante, tons rose gold. Reserve pelo Instagram!',
+  'Academia FitZone: Matrícula grátis em Fevereiro! Mensalidade R$ 89,90. Energia máxima, tipografia bold.',
+  'Lançamento: Tênis Runner X2 — Conforto e Performance. R$ 299,00. Estilo esportivo, fundo branco clean.',
+  'Clínica Odonto Sorrir: Clareamento Dental R$ 350,00. Design profissional, azul e branco, transmite confiança.',
+  'Apartamento 2 quartos, 68m², Varanda. R$ 480.000. Foto do imóvel, tons sóbrios, chamada: "AGENDE SUA VISITA"',
+  'Buffet Infantil: Pacote Completo para 50 crianças — R$ 2.500. Cores vibrantes, alegre, telefone de contato.',
+  'Curso Online de Marketing Digital: 40h + Certificado por R$ 197,00. Design moderno, cores vibrantes.',
+  'Oficina AutoCenter: Revisão Completa R$ 189,90. Foto do carro, design sério e confiável. Tel: (11) 3333-4444',
 ];
 
 const UX_PHRASES = [
-  'Analisando o cardápio...',
-  'Temperando as cores e texturas...',
-  'Montando o prato visual...',
-  'Ajustando iluminação gourmet 4K...',
-  'Finalizando detalhes de design...',
-  'Aplicando gramática impecável...',
-  'Harmonizando elementos visuais...',
+  'Analisando o seu negócio...',
+  'Detectando o segmento ideal...',
+  'Definindo paleta de cores...',
+  'Aplicando design profissional...',
+  'Gerando imagem em 4K...',
+  'Ajustando tipografia premium...',
+  'Finalizando detalhes visuais...',
+  'Harmonizando elementos do banner...',
 ];
 
 export default function HomePage() {
@@ -325,7 +326,7 @@ export default function HomePage() {
     }
     const link = document.createElement('a');
     link.href = base64;
-    link.download = `banner-restaurante-${size}-${index + 1}.png`;
+    link.download = `banner-${size}-${index + 1}.png`;
     link.click();
   };
 
@@ -487,7 +488,7 @@ export default function HomePage() {
 
           <h1 className={styles.heroTitle}>
             Banners de
-            <span className={styles.heroGradient}> gastronomia</span>
+            <span className={styles.heroGradient}> qualquer negócio</span>
           </h1>
 
         </section>
@@ -498,7 +499,7 @@ export default function HomePage() {
               className={styles.textarea}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
-              placeholder="Descreva seu prato ou promoção"
+              placeholder="Descreva seu produto, serviço ou promoção"
               rows={3}
             />
             <button

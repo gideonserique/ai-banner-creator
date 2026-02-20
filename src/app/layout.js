@@ -4,13 +4,12 @@ import BottomNav from '@/components/BottomNav';
 import PageViewTracker from '@/components/PageViewTracker';
 
 export const metadata = {
-  // ... existing metadata
-  title: 'BannerIA - Banners Profissionais para Restaurantes e Lanchonetes',
-  description: 'Crie banners profissionais para seu restaurante em segundos. Inteligência Artificial especializada em gastronomia, cardápios e promoções para Instagram e WhatsApp.',
-  keywords: 'restaurante, lanchonete, banner, design, cardápio, promoção, instagram, whatsapp, IA, inteligência artificial',
+  title: 'BannerIA - Banners Profissionais para Qualquer Negócio',
+  description: 'Crie banners profissionais para qualquer tipo de negócio em segundos. Inteligência Artificial que adapta o design para seu segmento: loja, restaurante, salão, clínica, academia e muito mais.',
+  keywords: 'banner, design, redes sociais, instagram, whatsapp, promoção, loja, produto, serviço, IA, inteligência artificial',
   openGraph: {
-    title: 'BannerIA - Design Gastronômico Instantâneo',
-    description: 'Transforme seu cardápio em banners de alto impacto com IA.',
+    title: 'BannerIA - Design Profissional para Qualquer Negócio',
+    description: 'Transforme seu produto ou serviço em banners de alto impacto com IA.',
     siteName: 'BannerIA',
     locale: 'pt_BR',
     type: 'website',

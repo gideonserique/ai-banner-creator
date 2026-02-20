@@ -6,8 +6,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const SOCIAL_SIZES = {
   square: { width: 1080, height: 1080, label: 'Quadrado (Post)' },
-  portrait: { width: 1080, height: 1920, label: 'Vertical (Story)' },
-  landscape: { width: 1280, height: 720, label: 'Horizontal (YouTube)' },
+  portrait: { width: 1080, height: 1920, label: 'Vertical (Story/Reels)' },
+  landscape: { width: 1280, height: 720, label: 'Horizontal (YouTube/LinkedIn)' },
 };
 
 export async function POST(request) {
@@ -21,51 +21,89 @@ export async function POST(request) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
 
-    // Se houver logo, adicionamos como uma imagem extra para referência da IA
+    // Logo handling
     let brandImages = [];
     if (logoUrl) {
       const [header, data] = logoUrl.split(',');
       const mimeType = header?.match(/:(.*?);/)?.[1] || 'image/png';
-      brandImages.push({
-        inlineData: {
-          data,
-          mimeType
-        }
-      });
+      brandImages.push({ inlineData: { data, mimeType } });
     }
 
     const imageParts = images.map(img => {
       const [header, data] = img.split(',');
       const mimeType = header.match(/:(.*?);/)[1];
-      return {
-        inlineData: {
-          data,
-          mimeType
-        }
-      };
+      return { inlineData: { data, mimeType } };
     });
 
+    const hasProductImages = imageParts.length > 0;
+
     const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Use o logotipo fornecido nos anexos de forma natural e profissional (geralmente nos cantos ou centro inferior). 
-         DIRETRIZ DE CORES: Use a paleta de cores do logotipo como base para o design do banner (fundos, textos e grafismos). 
-         NOTA: Se o BRIEFING do usuário mencionar cores específicas, as cores do briefing têm PRIORIDADE TOTAL sobre as cores do logo.`
-      : (companyName ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Exiba o nome da empresa "${companyName}" de forma clara e elegante, usando uma tipografia premium que harmonize com o estilo do banner.` : '');
+      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Utilize o logotipo fornecido nos anexos de forma natural e profissional (geralmente nos cantos ou centro inferior do banner).
+         CORES: Baseie a paleta de cores do banner nas cores do logotipo. Se o BRIEFING indicar cores específicas, elas têm PRIORIDADE TOTAL.`
+      : (companyName
+        ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Exiba o nome da empresa/marca "${companyName}" de forma clara e elegante, usando tipografia premium condizente com o segmento detectado.`
+        : '');
 
-    const systemPrompt = `Você é um Diretor de Arte Gastronômico de Classe Mundial especializado em publicidade para alta gastronomia.
-Sua tarefa é gerar 1 ÚNICO banner publicitário de resolução 4K (${dimensions.width}x${dimensions.height}) seguindo o briefing abaixo.
+    const productImageInstruction = hasProductImages
+      ? `TRATAMENTO DA IMAGEM DO PRODUTO (OBRIGATÓRIO):
+         - Você receberá uma ou mais fotos reais do produto nos anexos.
+         - APRIMORE a qualidade da foto: corrija iluminação, contraste, nitidez e cores para nível de estúdio profissional.
+         - REMOVA ou substitua o fundo original por um fundo limpo, gradiente ou ambientado — compatível com o estilo do banner.
+         - MANTENHA FIELMENTE todas as características do produto original: forma, cor, textura, detalhes — o produto deve ser claramente reconhecível como o mesmo da foto enviada.
+         - Integre o produto de forma harmoniosa e impactante ao layout do banner.`
+      : `GERAÇÃO DO PRODUTO (OBRIGATÓRIO):
+         - O usuário NÃO enviou foto. Gere uma imagem fotorrealista, de alta qualidade e profissional do produto ou serviço descrito no briefing.
+         - Use iluminação de estúdio, ângulo favorável e render de muito alta qualidade, como se fosse uma foto profissional tirada para publicidade.`;
 
-FORMATO: ${dimensions.label}
+    const systemPrompt = `Você é um Designer Especialista em Banners para Redes Sociais de Classe Mundial.
+Você domina criação de materiais publicitários de alta performance para QUALQUER tipo de negócio: varejo, tecnologia, moda, beleza, alimentação, serviços, saúde, educação, imóveis, automotivo, e muito mais.
 
-REGRAS CRÍTICAS DE DESIGN:
-1. SE O USUÁRIO ENVIAR FOTOS DE PRATOS: Transforme essas fotos em imagens de nível "Estúdio Profissional". Mantenha todos os detalhes originais, cores e a estrutura do prato real, mas aplique iluminação dramática de restaurante 5 estrelas, retoques de food styling e integre-as de forma totalmente harmoniosa ao banner.
-2. ${brandingInstruction}
-3. INFORMAÇÕES DE CONTATO: Se o prompt contiver telefone, WhatsApp, endereço, preços ou listas de produtos (cardápios), organize-os de forma elegante, legível e profissional. Use tipografia gastronômica premium.
-4. ESTÉTICA: O design deve ser "suculento", vibrante e abrir o apetite instantaneamente.
-5. Gere o banner DIRETAMENTE como um anexo de imagem (inlineData).
-6. Se o anexo falhar, retorne APENAS o código Base64 puro. 
-7. NÃO escreva textos explicativos antes ou depois. Use APENAS Português do Brasil com gramática impecável.
+Sua tarefa é gerar 1 ÚNICO banner publicitário profissional de resolução 4K (${dimensions.width}x${dimensions.height}), formato "${dimensions.label}".
 
- BRIEFING: "${prompt}"`;
+═══════════════════════════════════════════
+ETAPA 1 — ANÁLISE INTELIGENTE DO SEGMENTO
+═══════════════════════════════════════════
+Antes de criar, analise CUIDADOSAMENTE:
+• O BRIEFING do usuário (texto, produto, serviço descrito)  
+• As IMAGENS enviadas (se houver) — identifique o produto, categoria e contexto visual
+
+Com essa análise, determine o SEGMENTO (ex: eletrônico, restaurante, salão de beleza, academia, clínica, imobiliária, loja de roupas, etc.) e adapte COMPLETAMENTE o design:
+
+EXEMPLOS DE ADAPTAÇÃO POR SEGMENTO:
+- Eletrônico/Tecnologia → Design clean, cores frias (azul/preto/branco), tipografia tech, render 3D, fundo escuro ou gradiente futurista
+- Alimentação/Delivery → Cores quentes e apetitosas, iluminação "suculenta", close do produto, fundo rústico ou moderno
+- Moda/Vestuário → Estilo editorial, paleta sofisticada, lifestyle, fontes elegantes
+- Beleza/Estética → Tom rosê/dourado/nude, elegância, texturas suaves, luz suave difusa
+- Academia/Fitness → Energia, cores vibrantes, tipografia bold, contraste alto
+- Saúde/Clínica → Profissionalism, azul/verde, clean, transmite confiança
+- Serviços/Prestador → Foco no benefício, tipografia clara, call-to-action forte
+- Imóveis → Foto de impacto, tons sóbrios, sofisticação, detalhes arquitetônicos
+
+═══════════════════════════════════════════
+ETAPA 2 — EXECUÇÃO DO BANNER
+═══════════════════════════════════════════
+
+${productImageInstruction}
+
+${brandingInstruction}
+
+INFORMAÇÕES DE CONTATO E COMERCIAIS:
+- Se o briefing contiver telefone, WhatsApp, endereço, preços, listas de produtos/serviços ou promoções, organize-os de forma elegante, legível e profissional, respeitando a hierarquia visual do segmento.
+
+QUALIDADE TÉCNICA (OBRIGATÓRIO):
+- Composição visual profissional com hierarquia clara de informações
+- Tipografia premium e legível, adequada ao segmento
+- Cores harmoniosas e impactantes, alinhadas ao segmento detectado
+- Iluminação de produto de nível estúdio fotográfico profissional
+- Arte finalizada, sem elementos amadores ou mal posicionados
+- Use APENAS Português do Brasil impecável em todos os textos do banner
+
+OUTPUT:
+- Gere o banner DIRETAMENTE como imagem (inlineData) em ${dimensions.width}x${dimensions.height}px
+- NÃO escreva texto explicativo. Retorne SOMENTE a imagem.
+- Se o modo inlineData falhar, retorne APENAS o Base64 puro da imagem.
+
+BRIEFING DO CLIENTE: "${prompt}"`;
 
     const result = await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
 
@@ -95,14 +133,11 @@ REGRAS CRÍTICAS DE DESIGN:
 
           if (!foundImage && fullText) {
             console.log('[DEBUG] Full response text length:', fullText.length);
-            // Even more aggressive Base64 detection including possible data URI headers in text
             const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
             const matches = fullText.match(b64Regex);
             if (matches && matches.length > 0) {
               let cleanM = matches[0];
-              if (cleanM.includes('base64,')) {
-                cleanM = cleanM.split('base64,')[1];
-              }
+              if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
               cleanM = cleanM.replace(/[\r\n\s]/g, '');
               const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
               const data = `data:${mime};base64,${cleanM}`;
@@ -112,28 +147,21 @@ REGRAS CRÍTICAS DE DESIGN:
             }
           }
 
-          // SERVER-SIDE AUTO SAVE: Se estiver logado, salvamos direto na galeria
+          // SERVER-SIDE AUTO SAVE
           if (foundImage && userId) {
             console.log(`[SERVER-SAVE] Saving banner for user: ${userId}`);
-            const { error: saveError } = await supabaseAdmin.from('banners').insert([
-              {
-                user_id: userId,
-                image_url: finalImageData,
-                prompt: prompt,
-                size: size,
-              },
-            ]);
-
-            if (saveError) {
-              console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
-            } else {
-              console.log('[SERVER-SAVE] Banner successfully saved in background.');
-            }
+            const { error: saveError } = await supabaseAdmin.from('banners').insert([{
+              user_id: userId,
+              image_url: finalImageData,
+              prompt: prompt,
+              size: size,
+            }]);
+            if (saveError) console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
+            else console.log('[SERVER-SAVE] Banner successfully saved in background.');
           }
 
           if (!foundImage) {
-            console.error('EXTRACTION FAILED.');
-            console.log('AI Response Text Length:', fullText.length);
+            console.error('EXTRACTION FAILED. AI Response Text Length:', fullText.length);
             controller.enqueue(new TextEncoder().encode(JSON.stringify({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }) + '\n'));
           }
 
@@ -145,14 +173,10 @@ REGRAS CRÍTICAS DE DESIGN:
       }
     });
 
-    return new Response(stream, {
-      headers: { 'Content-Type': 'text/event-stream' }
-    });
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
 
   } catch (error) {
     console.error('Erro na geração:', error);
-    return NextResponse.json({
-      error: `Erro: ${error.message}.`
-    }, { status: 500 });
+    return NextResponse.json({ error: `Erro: ${error.message}.` }, { status: 500 });
   }
 }

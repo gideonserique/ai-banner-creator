@@ -27,7 +27,7 @@ export default function TermsPage() {
                 <div className={styles.card} style={{ gap: '24px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
                     <div>
                         <h2 className={styles.cardLabel} style={{ fontSize: '20px', color: 'var(--text-primary)', marginBottom: '10px' }}>1. Propósito do App</h2>
-                        <p>O BannerIA é uma ferramenta de auxílio criativo que utiliza Inteligência Artificial para gerar banners publicitários para o setor de gastronomia e comércio. Nosso objetivo é facilitar a criação de artes profissionais em segundos.</p>
+                        <p>O BannerIA é uma ferramenta de auxílio criativo que utiliza Inteligência Artificial para gerar banners publicitários para qualquer tipo de negócio: restaurantes, lojas, salões, clínicas, academias, serviços, e muito mais. Nosso objetivo é facilitar a criação de artes profissionais em segundos.</p>
                     </div>
 
                     <div>
