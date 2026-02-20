@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { createClient } from '@supabase/supabase-js';
 
 const ADMIN_EMAIL = 'gideongsr94@gmail.com';
 
@@ -13,13 +12,11 @@ export async function GET(request) {
         }
 
         const token = authHeader.replace('Bearer ', '');
-        const supabaseClient = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
 
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+        // Use supabaseAdmin (service role) to verify the JWT — more reliable than anon client
+        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
         if (authError || !user || user.email !== ADMIN_EMAIL) {
+            console.error('[ADMIN-STATS] Auth failed:', authError?.message, 'email:', user?.email);
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
