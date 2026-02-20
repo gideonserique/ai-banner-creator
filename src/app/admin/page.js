@@ -76,6 +76,7 @@ const TABS = [
     { id: 'traffic', label: '🌐 Tráfego' },
     { id: 'users', label: '👥 Usuários' },
     { id: 'activity', label: '🎨 Atividade' },
+    { id: 'anon', label: '👻 Anónimos' },
 ];
 
 export default function AdminDashboard() {
@@ -158,7 +159,7 @@ export default function AdminDashboard() {
         );
     }
 
-    const { kpis, chartData, profiles, recentActivity, sizeDistribution, traffic } = data;
+    const { kpis, chartData, profiles, recentActivity, sizeDistribution, traffic, anonymousBanners = [] } = data;
     const maxBanners = Math.max(...profiles.map(p => p.banner_count), 1);
     const maxViews = Math.max(...(traffic?.topPages || []).map(p => p.count), 1);
 
@@ -475,6 +476,55 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Tab: Anonymous Banners */}
+                {activeTab === 'anon' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                Banners gerados por visitantes não cadastrados
+                            </div>
+                            <span style={{ padding: '2px 10px', borderRadius: '20px', background: 'rgba(249,115,22,0.12)', color: 'var(--accent)', fontSize: '12px', fontWeight: 700 }}>
+                                {anonymousBanners.length} banners
+                            </span>
+                        </div>
+                        {anonymousBanners.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                                Nenhum banner anônimo ainda.<br />
+                                <span style={{ fontSize: '12px', marginTop: '6px', display: 'block' }}>Crie a tabela <code>anonymous_banners</code> no Supabase para ativar.</span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
+                                {anonymousBanners.map((item, i) => (
+                                    <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
+                                        <img
+                                            src={item.image_url}
+                                            alt="Banner anônimo"
+                                            style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                                            onError={e => { e.target.style.display = 'none'; }}
+                                        />
+                                        <div style={{ padding: '10px 12px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                                                {item.prompt || '—'}
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                                                    {{ square: '▣ Post', portrait: '▯ Story', landscape: '▬ YouTube' }[item.size] || item.size}
+                                                </span>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                                    {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'monospace' }}>
+                                                session: {item.session_id?.slice(0, 10)}...
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

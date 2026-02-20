@@ -12,7 +12,7 @@ const SOCIAL_SIZES = {
 
 export async function POST(request) {
   try {
-    const { prompt, size = 'square', images = [], logoUrl = '', companyName = '', userId = '' } = await request.json();
+    const { prompt, size = 'square', images = [], logoUrl = '', companyName = '', userId = '', sessionId = '' } = await request.json();
     const dimensions = SOCIAL_SIZES[size] || SOCIAL_SIZES.square;
 
     if (!process.env.GEMINI_API_KEY) {
@@ -87,8 +87,10 @@ ${productImageInstruction}
 
 ${brandingInstruction}
 
-INFORMAÇÕES DE CONTATO E COMERCIAIS:
-- Se o briefing contiver telefone, WhatsApp, endereço, preços, listas de produtos/serviços ou promoções, organize-os de forma elegante, legível e profissional, respeitando a hierarquia visual do segmento.
+INFORMAÇÕES DE CONTATO E COMERCIAIS (REGRA CRÍTICA):
+- Inclua NO BANNER APENAS as informações que o usuário especificou no briefing: preços, telefone, WhatsApp, endereço, horários, promoções, etc.
+- NUNCA invente, complete ou adicione informações que o usuário não mencionou (ex: não crie um número de telefone fictício se ele não informou).
+- Organize as informações fornecidas de forma elegante, legível e com hierarquia visual adequada ao segmento.
 
 QUALIDADE TÉCNICA (OBRIGATÓRIO):
 - Composição visual profissional com hierarquia clara de informações
@@ -147,7 +149,7 @@ BRIEFING DO CLIENTE: "${prompt}"`;
             }
           }
 
-          // SERVER-SIDE AUTO SAVE
+          // SERVER-SIDE AUTO SAVE — logged user
           if (foundImage && userId) {
             console.log(`[SERVER-SAVE] Saving banner for user: ${userId}`);
             const { error: saveError } = await supabaseAdmin.from('banners').insert([{
@@ -158,6 +160,19 @@ BRIEFING DO CLIENTE: "${prompt}"`;
             }]);
             if (saveError) console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
             else console.log('[SERVER-SAVE] Banner successfully saved in background.');
+          }
+
+          // SERVER-SIDE AUTO SAVE — anonymous user
+          if (foundImage && !userId && sessionId) {
+            console.log(`[ANON-SAVE] Saving anonymous banner for session: ${sessionId}`);
+            const { error: anonError } = await supabaseAdmin.from('anonymous_banners').insert([{
+              session_id: sessionId,
+              image_url: finalImageData,
+              prompt: prompt,
+              size: size,
+            }]);
+            if (anonError) console.error('[ANON-SAVE] Failed to save anonymous banner:', anonError);
+            else console.log('[ANON-SAVE] Anonymous banner saved.');
           }
 
           if (!foundImage) {

@@ -59,7 +59,14 @@ export default function HomePage() {
   const [guestMode, setGuestMode] = useState(false);
 
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const resultsRef = useRef(null);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
+  }, []);
 
   useEffect(() => {
     // Check current session
@@ -191,6 +198,15 @@ export default function HomePage() {
     const generationSize = selectedSize;
 
     try {
+      const sessionId = (() => {
+        if (typeof sessionStorage !== 'undefined') {
+          let id = sessionStorage.getItem('banneria_session_id');
+          if (!id) { id = Math.random().toString(36).slice(2); sessionStorage.setItem('banneria_session_id', id); }
+          return id;
+        }
+        return '';
+      })();
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -200,7 +216,8 @@ export default function HomePage() {
           images,
           logoUrl: userData.logoUrl,
           companyName: userData.companyName,
-          userId: user?.id
+          userId: user?.id,
+          sessionId: user ? '' : sessionId,
         }),
       });
 
@@ -399,6 +416,15 @@ export default function HomePage() {
       };
       reader.readAsDataURL(file);
     });
+    setShowMediaPicker(false);
+  };
+
+  const handleUploadClick = () => {
+    if (isMobile) {
+      setShowMediaPicker(true);
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const removeImage = (index) => {
@@ -487,8 +513,8 @@ export default function HomePage() {
         <section className={styles.hero}>
 
           <h1 className={styles.heroTitle}>
-            Banners de
-            <span className={styles.heroGradient}> qualquer negócio</span>
+            Banners para
+            <span className={styles.heroGradient}> o seu negócio</span>
           </h1>
 
         </section>
@@ -512,7 +538,7 @@ export default function HomePage() {
           </div>
 
           <div className={styles.uploadSection}>
-            <div className={styles.sizeLabel}>Fotos dos seus Pratos (Opcional)</div>
+            <div className={styles.sizeLabel}>Fotos do Produto ou Serviço (Opcional)</div>
             <div className={styles.imageGrid}>
               {images.map((img, idx) => (
                 <div key={idx} className={styles.imagePreview}>
@@ -520,10 +546,11 @@ export default function HomePage() {
                   <button className={styles.removeImg} onClick={() => removeImage(idx)}>×</button>
                 </div>
               ))}
-              <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+              <button className={styles.uploadBtn} onClick={handleUploadClick}>
                 <span>+</span>
               </button>
             </div>
+            {/* Gallery input (desktop + gallery on mobile) */}
             <input
               type="file"
               ref={fileInputRef}
@@ -532,88 +559,156 @@ export default function HomePage() {
               accept="image/*"
               style={{ display: 'none' }}
             />
+            {/* Camera input (mobile camera) */}
+            <input
+              type="file"
+              ref={cameraInputRef}
+              onChange={handleImageUpload}
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+            />
           </div>
 
-          <div className={styles.sizeLabel}>Escolha o formato</div>
-          <div className={styles.sizes}>
-            {SIZES.map(s => (
-              <button
-                key={s.id}
-                className={`${styles.sizeBtn} ${selectedSize === s.id ? styles.sizeBtnActive : ''}`}
-                onClick={() => setSelectedSize(s.id)}
+          {/* Mobile Media Picker Bottom Sheet */}
+          {showMediaPicker && (
+            <div
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+              onClick={() => setShowMediaPicker(false)}
+            >
+              <div
+                style={{ background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px 36px', width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '10px' }}
+                onClick={e => e.stopPropagation()}
               >
-                <span className={styles.sizeIcon}>{s.icon}</span>
-                <span className={styles.sizeName}>{s.label}</span>
-                <span className={styles.sizeDims}>{s.dims}</span>
-              </button>
-            ))}
-          </div>
-
-          {error && <div className={styles.errorMessage}>{error}</div>}
-
-          {loading && (
-            <div className={styles.progressContainer}>
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+                <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px', textAlign: 'center' }}>Adicionar Foto</div>
+                <button
+                  onClick={() => { setShowMediaPicker(false); cameraInputRef.current?.click(); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', borderRadius: '12px', border: '1px solid var(--border)', background: 'rgba(249,115,22,0.08)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '15px', fontWeight: 600 }}
+                >
+                  <span style={{ fontSize: '22px' }}>📷</span> Tirar Foto (Câmera)
+                </button>
+                <button
+                  onClick={() => { setShowMediaPicker(false); fileInputRef.current?.click(); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', borderRadius: '12px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '15px', fontWeight: 600 }}
+                >
+                  <span style={{ fontSize: '22px' }}>🖼️</span> Escolher da Galeria
+                </button>
+                <button
+                  onClick={() => setShowMediaPicker(false)}
+                  style={{ marginTop: '4px', padding: '12px', borderRadius: '12px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px' }}
+                >
+                  Cancelar
+                </button>
               </div>
-              <p className={styles.uxPhrase}>{currentPhrase}</p>
             </div>
           )}
-
-          <button
-            className={styles.generateBtn}
-            onClick={() => {
-              if (!user && !guestMode) {
-                setShowPreGenModal(true);
-              } else {
-                handleGenerate();
-              }
-            }}
-            disabled={loading || !prompt.trim()}
-          >
-            {loading ? (
-              <>
-                <span className={styles.spinner} />
-                Gerando Banner...
-              </>
-            ) : (
-              <>
-                <span>✦</span>
-                Gerar Banner
-              </>
-            )}
-          </button>
         </div>
 
-        {variations.length > 0 && (
-          <div className={styles.variations} ref={resultsRef}>
-            <h2 className={styles.sectionTitle}>Banner Gerado</h2>
-            <div className={styles.variationsGrid} style={{ maxWidth: '600px', margin: '0 auto' }}>
-              {variations.map((v, i) => (
-                <div key={i} className={styles.variationCard}>
-                  <div className={styles.variationPreview} style={{
-                    aspectRatio: SIZES.find(s => s.id === v.size).dims.replace('×', '/')
-                  }}>
-                    <img
-                      src={v.url}
-                      alt={`Banner ${i + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
-                    />
-                  </div>
-                  <div className={styles.actionGroup}>
-                    <button className={styles.selectBtn} onClick={() => handleDownload(v.url, v.size, i)}>
-                      Baixar Banner
-                    </button>
-                    <button className={styles.shareBtn} onClick={() => handleShare(v.url, v.size)}>
-                      Compartilhar
-                    </button>
-                  </div>
-                </div>
-              ))}
+        <div className={styles.sizeLabel}>Escolha o formato</div>
+        <div className={styles.sizes}>
+          {SIZES.map(s => (
+            <button
+              key={s.id}
+              className={`${styles.sizeBtn} ${selectedSize === s.id ? styles.sizeBtnActive : ''}`}
+              onClick={() => setSelectedSize(s.id)}
+            >
+              <span className={styles.sizeIcon}>{s.icon}</span>
+              <span className={styles.sizeName}>{s.label}</span>
+              <span className={styles.sizeDims}>{s.dims}</span>
+            </button>
+          ))}
+        </div>
+
+        {error && <div className={styles.errorMessage}>{error}</div>}
+
+        {loading && (
+          <div className={styles.progressContainer}>
+            <div className={styles.progressBar}>
+              <div className={styles.progressFill} style={{ width: `${progress}%` }} />
             </div>
+            <p className={styles.uxPhrase}>{currentPhrase}</p>
           </div>
         )}
+
+        <button
+          className={styles.generateBtn}
+          onClick={() => {
+            if (!user && !guestMode) {
+              setShowPreGenModal(true);
+            } else {
+              handleGenerate();
+            }
+          }}
+          disabled={loading || !prompt.trim()}
+        >
+          {loading ? (
+            <>
+              <span className={styles.spinner} />
+              Gerando Banner...
+            </>
+          ) : (
+            <>
+              <span>✦</span>
+              Gerar Banner
+            </>
+          )}
+        </button>
       </div>
+
+      {variations.length > 0 && (
+        <div className={styles.variations} ref={resultsRef}>
+          <h2 className={styles.sectionTitle}>Banner Gerado</h2>
+          <div className={styles.variationsGrid} style={{ maxWidth: '600px', margin: '0 auto' }}>
+            {variations.map((v, i) => (
+              <div key={i} className={styles.variationCard}>
+                <div className={styles.variationPreview} style={{
+                  aspectRatio: SIZES.find(s => s.id === v.size).dims.replace('×', '/'),
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  <img
+                    src={v.url}
+                    alt={`Banner ${i + 1}`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                      pointerEvents: 'none',
+                    }}
+                    draggable={false}
+                    onContextMenu={e => e.preventDefault()}
+                    onDragStart={e => e.preventDefault()}
+                  />
+                  {/* Invisible overlay to block right-click and long-press on mobile */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      zIndex: 1,
+                      WebkitTouchCallout: 'none',
+                      userSelect: 'none',
+                      cursor: 'default',
+                    }}
+                    onContextMenu={e => e.preventDefault()}
+                  />
+                </div>
+                <div className={styles.actionGroup}>
+                  <button className={styles.selectBtn} onClick={() => handleDownload(v.url, v.size, i)}>
+                    Baixar Banner
+                  </button>
+                  <button className={styles.shareBtn} onClick={() => handleShare(v.url, v.size)}>
+                    Compartilhar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {showLimitModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center' }}>

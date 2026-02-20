@@ -203,6 +203,20 @@ export async function GET(request) {
             };
         });
 
+        // 6. Fetch anonymous banners — graceful if table doesn't exist yet
+        let anonymousBanners = [];
+        try {
+            const { data: anonData, error: anonError } = await supabaseAdmin
+                .from('anonymous_banners')
+                .select('id, session_id, prompt, size, image_url, created_at')
+                .order('created_at', { ascending: false })
+                .limit(50);
+            if (!anonError && anonData) anonymousBanners = anonData;
+            else if (anonError) console.warn('[ADMIN-STATS] anonymous_banners not ready:', anonError.message);
+        } catch (e) {
+            console.warn('[ADMIN-STATS] anonymous_banners table missing, skipping.');
+        }
+
         return NextResponse.json({
             kpis: {
                 totalUsers, totalPremium, totalFree, conversionRate,
@@ -211,12 +225,15 @@ export async function GET(request) {
                 // Traffic
                 totalPageViews, uniqueSessions, anonymousVisits, loggedInVisits,
                 uniqueVisitorsLast7d, pageViewsLast7d,
+                // Anonymous banners
+                totalAnonBanners: anonymousBanners.length,
             },
             chartData: daysArray,
             profiles: enrichedProfiles,
             recentActivity,
             sizeDistribution: sizeCount,
             traffic: { deviceCount, topPages, topReferrers },
+            anonymousBanners,
         });
 
     } catch (error) {
