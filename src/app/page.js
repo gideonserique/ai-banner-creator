@@ -81,7 +81,7 @@ export default function HomePage() {
             // AUTO-SAVE: Se restauramos um banner e o user agora está logado, 
             // salvamos na galeria dele imediatamente se ele veio de um guest flow.
             if (data.variations && data.variations.length > 0) {
-              saveBanner(data.variations[0].url, data.selectedSize || 'square', data.prompt || '');
+              saveBannerForUser(currentUser.id, data.variations[0].url, data.selectedSize || 'square', data.prompt || '');
             }
 
             // Clear from storage after restoration
@@ -94,11 +94,32 @@ export default function HomePage() {
       }
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (e.g. redirect back after signup)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      if (currentUser) fetchProfile(currentUser.id);
+      if (currentUser) {
+        fetchProfile(currentUser.id);
+
+        // If signup/login happened and there's a pending banner, save it now
+        const pending = localStorage.getItem('banneria_pending_session');
+        if (pending) {
+          try {
+            const data = JSON.parse(pending);
+            setVariations(data.variations || []);
+            setPrompt(data.prompt || '');
+            setSelectedSize(data.selectedSize || 'square');
+            setImages(data.images || []);
+            if (data.variations && data.variations.length > 0) {
+              saveBannerForUser(currentUser.id, data.variations[0].url, data.selectedSize || 'square', data.prompt || '');
+            }
+            localStorage.removeItem('banneria_pending_session');
+            setGuestMode(true);
+          } catch (e) {
+            console.error('Falha ao restaurar banner pendente no auth change:', e);
+          }
+        }
+      }
     });
 
     // REFRESH RESILIENCE: Check if a generation was in progress
@@ -252,23 +273,43 @@ export default function HomePage() {
     }
   };
 
+  // saveBannerForUser accepts userId explicitly to avoid stale state closure issues
+  const saveBannerForUser = async (userId, url, size, promptText) => {
+    if (!userId) {
+      setError('Sua arte foi gerada, mas você precisa estar logado para salvá-la.');
+      return;
+    }
+    setError(null);
+    try {
+      const { error: saveError } = await supabase.from('banners').insert([{
+        user_id: userId,
+        image_url: url,
+        prompt: promptText,
+        size: size,
+      }]);
+      if (saveError) throw saveError;
+      console.log('✅ Banner salvo com sucesso.');
+      setTimeout(() => fetchProfile(userId), 1500);
+    } catch (e) {
+      console.error('Erro ao salvar banner:', e);
+      setError('Sua arte foi gerada, mas houve um erro ao salvá-la na galeria: ' + e.message);
+    }
+  };
+
+  // saveBanner uses current user state (for logged-in flows)
   const saveBanner = async (url, size, promptText) => {
     setError(null);
     try {
       // O contador (generations_count) agora é incrementado automaticamente 
       // via Trigger no Banco de Dados quando um novo banner é inserido.
-      const { error: saveError } = await supabase.from('banners').insert([
-        {
-          user_id: user.id,
-          image_url: url,
-          prompt: promptText,
-          size: size,
-        },
-      ]);
+      const { error: saveError } = await supabase.from('banners').insert([{
+        user_id: user.id,
+        image_url: url,
+        prompt: promptText,
+        size: size,
+      }]);
       if (saveError) throw saveError;
-
       console.log('✅ Banner salvo com sucesso. O Trigger deve incrementar o contador.');
-
       // Aguarda um pouco para o trigger processar e atualiza os dados locais
       setTimeout(() => fetchProfile(user.id), 1500);
     } catch (e) {
