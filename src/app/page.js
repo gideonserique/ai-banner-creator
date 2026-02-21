@@ -61,8 +61,12 @@ export default function HomePage() {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const resultsRef = useRef(null);
+  const recognitionRef = useRef(null);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceError, setVoiceError] = useState('');
 
   useEffect(() => {
     setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
@@ -431,6 +435,59 @@ export default function HomePage() {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const startVoice = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError('Seu navegador não suporta gravação de voz. Use Chrome ou Edge.');
+      return;
+    }
+    setVoiceError('');
+    setVoiceTranscript('');
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      let finalText = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += t;
+        else interim += t;
+      }
+      setVoiceTranscript(interim || finalText);
+      if (finalText) {
+        setPrompt(prev => {
+          const sep = prev.trim() ? ' ' : '';
+          return prev + sep + finalText.trim();
+        });
+      }
+    };
+
+    recognition.onerror = (e) => {
+      const msgs = {
+        'not-allowed': 'Permissão de microfone negada. Habilite nas configurações do navegador.',
+        'no-speech': 'Nenhuma fala detectada. Tente novamente.',
+        'network': 'Erro de rede ao processar a voz.',
+      };
+      setVoiceError(msgs[e.error] || `Erro: ${e.error}`);
+      setIsListening(false);
+      setVoiceTranscript('');
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceTranscript('');
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -536,6 +593,51 @@ export default function HomePage() {
               ✨
             </button>
           </div>
+
+          {/* Voice button */}
+          <button
+            type="button"
+            onClick={startVoice}
+            disabled={isListening}
+            title={isListening ? 'Gravando... fale agora' : 'Falar para digitar'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '8px',
+              padding: '8px 18px',
+              borderRadius: '20px',
+              border: isListening
+                ? '1.5px solid rgba(239,68,68,0.5)'
+                : '1.5px solid var(--border)',
+              background: isListening
+                ? 'rgba(239,68,68,0.09)'
+                : 'var(--bg-secondary)',
+              color: isListening ? '#ef4444' : 'var(--text-secondary)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: isListening ? 'default' : 'pointer',
+              transition: 'all 0.2s',
+              alignSelf: 'flex-start',
+            }}
+          >
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: isListening ? '#ef4444' : 'var(--text-muted)',
+              flexShrink: 0,
+              animation: isListening ? 'micPulse 1s ease-in-out infinite' : 'none',
+            }} />
+            {isListening
+              ? (voiceTranscript ? `"${voiceTranscript}"` : 'Ouvindo...')
+              : '🎤 Falar'}
+          </button>
+          {voiceError && (
+            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px' }}>
+              {voiceError}
+            </div>
+          )}
 
           <div className={styles.uploadSection}>
             <div className={styles.sizeLabel}>Fotos do Produto ou Serviço (Opcional)</div>
@@ -710,37 +812,39 @@ export default function HomePage() {
         )}
       </div>
 
-      {showLimitModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center' }}>
-            <span style={{ fontSize: '40px' }}>💎</span>
-            <h2 className={styles.modalTitle} style={{ marginTop: '10px' }}>Limite Atingido!</h2>
-            <p className={styles.modalSub} style={{ margin: '15px 0' }}>
-              Você atingiu o limite de 5 banners no plano Gratuito, mas sua criatividade não precisa parar aqui!
-            </p>
-            <div style={{ textAlign: 'left', marginBottom: '20px', fontSize: '14px', background: 'rgba(245, 158, 11, 0.1)', padding: '15px', borderRadius: '12px' }}>
-              <p>Migre para o <strong>Premium</strong> e garanta:</p>
-              <ul style={{ listStyle: 'none', padding: 0, marginTop: '10px' }}>
-                <li style={{ marginBottom: '5px' }}>✅ Banners **ILIMITADOS**</li>
-                <li style={{ marginBottom: '5px' }}>✅ Suporte VIP no WhatsApp</li>
-                <li>✅ Todas as atualizações futuras</li>
-              </ul>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <Link href="/profile" className={styles.primaryBtn}>
-                Ver Planos e Upgrade
-              </Link>
-              <button
-                className={styles.secondaryBtn}
-                onClick={() => setShowLimitModal(false)}
-                style={{ background: 'transparent', border: 'none' }}
-              >
-                Talvez mais tarde
-              </button>
+      {
+        showLimitModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center' }}>
+              <span style={{ fontSize: '40px' }}>💎</span>
+              <h2 className={styles.modalTitle} style={{ marginTop: '10px' }}>Limite Atingido!</h2>
+              <p className={styles.modalSub} style={{ margin: '15px 0' }}>
+                Você atingiu o limite de 5 banners no plano Gratuito, mas sua criatividade não precisa parar aqui!
+              </p>
+              <div style={{ textAlign: 'left', marginBottom: '20px', fontSize: '14px', background: 'rgba(245, 158, 11, 0.1)', padding: '15px', borderRadius: '12px' }}>
+                <p>Migre para o <strong>Premium</strong> e garanta:</p>
+                <ul style={{ listStyle: 'none', padding: 0, marginTop: '10px' }}>
+                  <li style={{ marginBottom: '5px' }}>✅ Banners **ILIMITADOS**</li>
+                  <li style={{ marginBottom: '5px' }}>✅ Suporte VIP no WhatsApp</li>
+                  <li>✅ Todas as atualizações futuras</li>
+                </ul>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Link href="/profile" className={styles.primaryBtn}>
+                  Ver Planos e Upgrade
+                </Link>
+                <button
+                  className={styles.secondaryBtn}
+                  onClick={() => setShowLimitModal(false)}
+                  style={{ background: 'transparent', border: 'none' }}
+                >
+                  Talvez mais tarde
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </main>
+        )
+      }
+    </main >
   );
 }
