@@ -451,7 +451,7 @@ export default function HomePage() {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
-    recognition.interimResults = true;
+    recognition.interimResults = false;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
@@ -463,12 +463,11 @@ export default function HomePage() {
     };
 
     recognition.onresult = (event) => {
-      let fullPreview = '';
+      let fullTranscript = '';
       for (let i = 0; i < event.results.length; i++) {
-        fullPreview += event.results[i][0].transcript;
+        fullTranscript += event.results[i][0].transcript;
       }
-      setVoiceTranscript(fullPreview);
-      accumulatedTranscriptRef.current = fullPreview;
+      accumulatedTranscriptRef.current = fullTranscript;
     };
 
     recognition.onerror = (e) => {
@@ -640,7 +639,7 @@ export default function HomePage() {
               <div className={styles.recordingOverlay}>
                 <div className={styles.recordingPulse} />
                 <span className={styles.recordingText}>
-                  {voiceTranscript ? `"${voiceTranscript}"` : 'Gravando áudio...'}
+                  Gravando áudio... Clique para parar
                 </span>
               </div>
             )}
