@@ -502,6 +502,15 @@ export default function HomePage() {
     recognition.start();
   };
 
+  const toggleVoice = (e) => {
+    if (e && e.cancelable) e.preventDefault();
+    if (isListening) {
+      stopVoice(e);
+    } else {
+      startVoice(e);
+    }
+  };
+
   const stopVoice = (e) => {
     if (e && e.cancelable) e.preventDefault();
     if (recognitionRef.current) {
@@ -619,13 +628,9 @@ export default function HomePage() {
             <button
               type="button"
               className={`${styles.voiceBtn} ${isListening ? styles.voiceBtnActive : ''}`}
-              onMouseDown={startVoice}
-              onMouseUp={stopVoice}
-              onMouseLeave={isListening ? stopVoice : undefined}
-              onTouchStart={startVoice}
-              onTouchEnd={stopVoice}
+              onClick={toggleVoice}
               onContextMenu={(e) => e.preventDefault()}
-              title="Segure para falar"
+              title={isListening ? 'Clique para parar' : 'Clique para falar'}
             >
               <span className={styles.micIcon}>🎤</span>
             </button>
