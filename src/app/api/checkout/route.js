@@ -32,7 +32,7 @@ export async function POST(req) {
             throw new Error(`Invalid NEXT_PUBLIC_APP_URL: ${appUrl}. It must start with http:// or https://`);
         }
 
-        const success_url = `${appUrl}/profile?success=true&plan=${planId}`;
+        const success_url = `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
         const cancel_url = `${appUrl}/profile?canceled=true`;
 
         console.log(`🛒 Creating Stripe Checkout for plan: ${planId} (${priceId})`);
