@@ -435,21 +435,32 @@ export default function HomePage() {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const startVoice = () => {
+  const startVoice = (e) => {
+    // Prevent default to avoid focus issues on mobile
+    if (e && e.cancelable) e.preventDefault();
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setVoiceError('Seu navegador não suporta gravação de voz. Use Chrome ou Edge.');
       return;
     }
+
     setVoiceError('');
     setVoiceTranscript('');
+
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true; // Use continuous for better long-press experience
     recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      setIsListening(true);
+      // Optional: vibration feedback for mobile haptics
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    };
 
     recognition.onresult = (event) => {
       let interim = '';
@@ -469,10 +480,11 @@ export default function HomePage() {
     };
 
     recognition.onerror = (e) => {
+      if (e.error === 'aborted') return; // Ignore manual stop
       const msgs = {
-        'not-allowed': 'Permissão de microfone negada. Habilite nas configurações do navegador.',
-        'no-speech': 'Nenhuma fala detectada. Tente novamente.',
-        'network': 'Erro de rede ao processar a voz.',
+        'not-allowed': 'Permissão de microfone negada.',
+        'no-speech': 'Nenhuma fala detectada.',
+        'network': 'Erro de rede.',
       };
       setVoiceError(msgs[e.error] || `Erro: ${e.error}`);
       setIsListening(false);
@@ -486,6 +498,14 @@ export default function HomePage() {
 
     recognitionRef.current = recognition;
     recognition.start();
+  };
+
+  const stopVoice = (e) => {
+    if (e && e.cancelable) e.preventDefault();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
   };
 
   const handleLogout = async () => {
@@ -592,49 +612,35 @@ export default function HomePage() {
             >
               ✨
             </button>
+
+            {/* WhatsApp Style Mic Button */}
+            <button
+              type="button"
+              className={`${styles.voiceBtn} ${isListening ? styles.voiceBtnActive : ''}`}
+              onMouseDown={startVoice}
+              onMouseUp={stopVoice}
+              onMouseLeave={isListening ? stopVoice : undefined}
+              onTouchStart={startVoice}
+              onTouchEnd={stopVoice}
+              onContextMenu={(e) => e.preventDefault()}
+              title="Segure para falar"
+            >
+              <span className={styles.micIcon}>🎤</span>
+            </button>
+
+            {/* Recording Feedback Overlay */}
+            {isListening && (
+              <div className={styles.recordingOverlay}>
+                <div className={styles.recordingPulse} />
+                <span className={styles.recordingText}>
+                  {voiceTranscript ? `"${voiceTranscript}"` : 'Gravando áudio...'}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Voice button */}
-          <button
-            type="button"
-            onClick={startVoice}
-            disabled={isListening}
-            title={isListening ? 'Gravando... fale agora' : 'Falar para digitar'}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginTop: '8px',
-              padding: '8px 18px',
-              borderRadius: '20px',
-              border: isListening
-                ? '1.5px solid rgba(239,68,68,0.5)'
-                : '1.5px solid var(--border)',
-              background: isListening
-                ? 'rgba(239,68,68,0.09)'
-                : 'var(--bg-secondary)',
-              color: isListening ? '#ef4444' : 'var(--text-secondary)',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: isListening ? 'default' : 'pointer',
-              transition: 'all 0.2s',
-              alignSelf: 'flex-start',
-            }}
-          >
-            <span style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: isListening ? '#ef4444' : 'var(--text-muted)',
-              flexShrink: 0,
-              animation: isListening ? 'micPulse 1s ease-in-out infinite' : 'none',
-            }} />
-            {isListening
-              ? (voiceTranscript ? `"${voiceTranscript}"` : 'Ouvindo...')
-              : '🎤 Falar'}
-          </button>
           {voiceError && (
-            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px' }}>
+            <div className={styles.errorMessage} style={{ marginTop: '8px', marginBottom: 0, padding: '8px' }}>
               {voiceError}
             </div>
           )}
