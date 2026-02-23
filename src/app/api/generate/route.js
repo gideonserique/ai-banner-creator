@@ -10,6 +10,16 @@ const SOCIAL_SIZES = {
   landscape: { width: 1280, height: 720, label: 'Horizontal (YouTube/LinkedIn)' },
 };
 
+// Per-tier monthly generation limits. null = unlimited.
+const TIER_LIMITS = {
+  free: 5,
+  starter: 20,
+  unlimited_monthly: null,
+  unlimited_annual: null,
+  // Backwards compatibility for old 'premium' users (mapped to starter on next login)
+  premium: 20,
+};
+
 export async function POST(request) {
   try {
     const { prompt, size = 'square', images = [], logoUrl = '', companyName = '', userId = '', sessionId = '' } = await request.json();
@@ -17,6 +27,34 @@ export async function POST(request) {
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'API Key missing' }, { status: 500 });
+    }
+
+    // ── Generation Limit Check (for logged-in users) ──────────────────────
+    if (userId) {
+      const { data: profileData, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('subscription_tier, generations_count')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('[LIMIT CHECK] Failed to fetch profile:', profileError);
+      } else {
+        const tier = profileData?.subscription_tier || 'free';
+        const count = profileData?.generations_count || 0;
+        const limit = TIER_LIMITS[tier];
+
+        if (limit !== null && count >= limit) {
+          console.log(`[LIMIT] User ${userId} on tier "${tier}" hit limit (${count}/${limit})`);
+          return NextResponse.json({
+            error: 'LIMIT_REACHED',
+            tier,
+            limit,
+            count,
+            message: `Você atingiu o limite de ${limit} artes do seu plano. Faça upgrade para continuar criando!`,
+          }, { status: 429 });
+        }
+      }
     }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
@@ -158,8 +196,15 @@ BRIEFING DO CLIENTE: "${prompt}"`;
               prompt: prompt,
               size: size,
             }]);
-            if (saveError) console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
-            else console.log('[SERVER-SAVE] Banner successfully saved in background.');
+            if (saveError) {
+              console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
+            } else {
+              console.log('[SERVER-SAVE] Banner successfully saved.');
+              // Increment generation counter (only matters for limited plans, harmless for unlimited)
+              const { error: countError } = await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
+              if (countError) console.error('[SERVER-SAVE] Failed to increment count:', countError);
+              else console.log('[SERVER-SAVE] Generation count incremented.');
+            }
           }
 
           // SERVER-SIDE AUTO SAVE — anonymous user

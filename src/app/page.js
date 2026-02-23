@@ -186,8 +186,10 @@ export default function HomePage() {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
-    // Check limits for free users
-    if (user && userData.subscriptionTier === 'free' && userData.generationsCount >= 5) {
+    // Client-side fast-path: block limited users who already hit their cap
+    const tierLimits = { free: 5, starter: 20, premium: 20 };
+    const localLimit = tierLimits[userData.subscriptionTier];
+    if (user && localLimit !== undefined && userData.generationsCount >= localLimit) {
       setShowLimitModal(true);
       return;
     }
@@ -229,6 +231,13 @@ export default function HomePage() {
 
       if (!response.ok) {
         const data = await response.json();
+        // Handle server-side enforced limit (catches starter plan hitting 20, etc.)
+        if (data.error === 'LIMIT_REACHED') {
+          setShowLimitModal(true);
+          setLoading(false);
+          setProgress(0);
+          return;
+        }
         throw new Error(data.error || 'Falha na geração');
       }
 
@@ -645,15 +654,29 @@ export default function HomePage() {
             </button>
 
             {/* WhatsApp Style Mic Button */}
-            <button
-              type="button"
-              className={`${styles.voiceBtn} ${isListening ? styles.voiceBtnActive : ''}`}
-              onClick={toggleVoice}
-              onContextMenu={(e) => e.preventDefault()}
-              title={isListening ? 'Clique para parar' : 'Clique para falar'}
-            >
-              <span className={styles.micIcon}>🎤</span>
-            </button>
+            {userData.subscriptionTier === 'free' ? (
+              // Locked for free users
+              <button
+                type="button"
+                className={styles.voiceBtn}
+                onClick={() => { window.location.href = '/profile'; }}
+                title="Criação por voz disponível no Plano Starter. Clique para fazer upgrade."
+                style={{ opacity: 0.5, cursor: 'not-allowed' }}
+              >
+                <span className={styles.micIcon}>🔒</span>
+              </button>
+            ) : (
+              // Unlocked for paid users
+              <button
+                type="button"
+                className={`${styles.voiceBtn} ${isListening ? styles.voiceBtnActive : ''}`}
+                onClick={toggleVoice}
+                onContextMenu={(e) => e.preventDefault()}
+                title={isListening ? 'Clique para parar' : 'Clique para falar'}
+              >
+                <span className={styles.micIcon}>🎤</span>
+              </button>
+            )}
 
             {/* Recording Feedback Overlay */}
             {isListening && (
@@ -852,23 +875,26 @@ export default function HomePage() {
       {
         showLimitModal && (
           <div className={styles.modalOverlay}>
-            <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center' }}>
-              <span style={{ fontSize: '40px' }}>💎</span>
+            <div className={styles.modalContent} style={{ maxWidth: '420px', textAlign: 'center' }}>
+              <span style={{ fontSize: '40px' }}>🚀</span>
               <h2 className={styles.modalTitle} style={{ marginTop: '10px' }}>Limite Atingido!</h2>
               <p className={styles.modalSub} style={{ margin: '15px 0' }}>
-                Você atingiu o limite de 5 banners no plano Gratuito, mas sua criatividade não precisa parar aqui!
+                Você usou todas as {userData.subscriptionTier === 'starter' ? '20' : '5'} artes do seu plano
+                <strong> {userData.subscriptionTier === 'starter' ? 'Starter' : 'Gratuito'}</strong>.
+                Faça upgrade para continuar criando!
               </p>
-              <div style={{ textAlign: 'left', marginBottom: '20px', fontSize: '14px', background: 'rgba(245, 158, 11, 0.1)', padding: '15px', borderRadius: '12px' }}>
-                <p>Migre para o <strong>Premium</strong> e garanta:</p>
-                <ul style={{ listStyle: 'none', padding: 0, marginTop: '10px' }}>
-                  <li style={{ marginBottom: '5px' }}>✅ Banners **ILIMITADOS**</li>
-                  <li style={{ marginBottom: '5px' }}>✅ Suporte VIP no WhatsApp</li>
-                  <li>✅ Todas as atualizações futuras</li>
+              <div style={{ textAlign: 'left', marginBottom: '20px', fontSize: '14px', background: 'rgba(139, 92, 246, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                <p style={{ marginBottom: '10px', fontWeight: '600' }}>No plano Ilimitado você tem:</p>
+                <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <li>♾️ Criações ilimitadas todos os meses</li>
+                  <li>🎤 Criação por comando de voz</li>
+                  <li>✨ Escritor de Legendas com IA</li>
+                  <li>⭐ Suporte prioritário no WhatsApp</li>
                 </ul>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <Link href="/profile" className={styles.primaryBtn}>
-                  Ver Planos e Upgrade
+                  Ver Planos e Fazer Upgrade
                 </Link>
                 <button
                   className={styles.secondaryBtn}
