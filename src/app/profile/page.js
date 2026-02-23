@@ -18,8 +18,8 @@ const PLANS = [
         icon: '🆓',
         features: [
             { label: 'Suporte Humano', ok: true },
-            { label: 'Criação por Voz', ok: false },
-            { label: 'Escritor de Legendas IA', ok: false },
+            { label: 'Comando por Voz', ok: false, badge: 'PRO' },
+            { label: 'Escritor de Legendas IA', ok: false, badge: 'PRO' },
         ],
     },
     {
@@ -33,7 +33,7 @@ const PLANS = [
         icon: '🚀',
         features: [
             { label: 'Suporte Humano', ok: true },
-            { label: 'Criação por Voz', ok: true },
+            { label: 'Comando por Voz', ok: true },
             { label: 'Escritor de Legendas IA', ok: true },
         ],
     },
@@ -49,7 +49,7 @@ const PLANS = [
         badge: 'Popular',
         features: [
             { label: 'Suporte Prioritário', ok: true },
-            { label: 'Criação por Voz', ok: true },
+            { label: 'Comando por Voz', ok: true },
             { label: 'Escritor de Legendas IA', ok: true },
         ],
     },
@@ -66,7 +66,7 @@ const PLANS = [
         badge: 'Mais Econômico',
         features: [
             { label: 'Suporte Prioritário', ok: true },
-            { label: 'Criação por Voz', ok: true },
+            { label: 'Comando por Voz', ok: true },
             { label: 'Escritor de Legendas IA', ok: true },
         ],
     },
@@ -370,7 +370,13 @@ export default function ProfilePage() {
                 {/* ── PRICING TABLE ────────────────────────────────────────── */}
                 <div style={{ marginBottom: '40px' }}>
                     <h2 className={styles.cardLabel} style={{ marginBottom: '20px', fontSize: '20px' }}>Planos Disponíveis</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                        gap: '20px',
+                        maxWidth: '900px',
+                        margin: '0 auto'
+                    }}>
                         {PLANS.map((plan) => {
                             const isCurrentPlan = profile.subscription_tier === plan.slug;
                             return (
@@ -411,10 +417,30 @@ export default function ProfilePage() {
                                     <div style={{ fontSize: '13px', color: plan.color, fontWeight: '600' }}>📊 {plan.limitLabel}</div>
 
                                     {/* Features */}
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {plan.features.map((f, i) => (
-                                            <li key={i} style={{ fontSize: '13px', color: f.ok ? 'var(--text-secondary)' : 'var(--text-muted)', display: 'flex', gap: '6px' }}>
-                                                <span>{f.ok ? '✅' : '🔒'}</span> {f.label}
+                                            <li key={i} style={{
+                                                fontSize: '13px',
+                                                color: f.ok ? 'var(--text-secondary)' : 'var(--text-muted)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}>
+                                                <span style={{ fontSize: '14px' }}>{f.ok ? '✅' : '🔒'}</span>
+                                                <span>{f.label}</span>
+                                                {f.badge && (
+                                                    <span style={{
+                                                        fontSize: '9px',
+                                                        fontWeight: '800',
+                                                        background: 'var(--accent-light)',
+                                                        color: 'white',
+                                                        padding: '1px 5px',
+                                                        borderRadius: '4px',
+                                                        marginLeft: '4px'
+                                                    }}>
+                                                        {f.badge}
+                                                    </span>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>

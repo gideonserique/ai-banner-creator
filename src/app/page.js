@@ -659,11 +659,28 @@ export default function HomePage() {
               <button
                 type="button"
                 className={styles.voiceBtn}
-                onClick={() => { window.location.href = '/profile'; }}
-                title="Criação por voz disponível no Plano Starter. Clique para fazer upgrade."
-                style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                onClick={() => {
+                  setError('O Comando por Voz está disponível a partir do Plano Starter. Faça upgrade para liberar esta e outras funções premium!');
+                  // Optional: focus user on upgrade path
+                  setTimeout(() => { if (confirm('Deseja ver os planos agora?')) window.location.href = '/profile'; }, 2000);
+                }}
+                title="Comando por Voz (PRO). Clique para ver planos."
+                style={{ opacity: 0.7, cursor: 'pointer' }}
               >
-                <span className={styles.micIcon}>🔒</span>
+                <div style={{ position: 'relative' }}>
+                  <span className={styles.micIcon}>🎤</span>
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    fontSize: '8px',
+                    background: 'var(--accent-light)',
+                    color: 'white',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    fontWeight: '800'
+                  }}>PRO</span>
+                </div>
               </button>
             ) : (
               // Unlocked for paid users
@@ -672,7 +689,7 @@ export default function HomePage() {
                 className={`${styles.voiceBtn} ${isListening ? styles.voiceBtnActive : ''}`}
                 onClick={toggleVoice}
                 onContextMenu={(e) => e.preventDefault()}
-                title={isListening ? 'Clique para parar' : 'Clique para falar'}
+                title={isListening ? 'Clique para parar' : 'Clique para falar (Comando por Voz)'}
               >
                 <span className={styles.micIcon}>🎤</span>
               </button>
