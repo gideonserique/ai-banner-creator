@@ -63,7 +63,6 @@ export default function HomePage() {
   const resultsRef = useRef(null);
   const recognitionRef = useRef(null);
   const accumulatedTranscriptRef = useRef('');
-  const lastCommittedIndexRef = useRef(-1);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -449,7 +448,6 @@ export default function HomePage() {
     setVoiceError('');
     setVoiceTranscript('');
     accumulatedTranscriptRef.current = '';
-    lastCommittedIndexRef.current = -1;
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
@@ -466,29 +464,11 @@ export default function HomePage() {
 
     recognition.onresult = (event) => {
       let fullPreview = '';
-      let finalTextSoFar = '';
-
       for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        const text = result[0].transcript;
-        fullPreview += text;
-
-        if (result.isFinal) {
-          finalTextSoFar += text;
-          // If this index is newly final and we haven't committed it yet
-          if (i > lastCommittedIndexRef.current) {
-            setPrompt(prev => {
-              const sep = prev.trim() ? ' ' : '';
-              return prev + sep + text.trim();
-            });
-            lastCommittedIndexRef.current = i;
-          }
-        }
+        fullPreview += event.results[i][0].transcript;
       }
-
       setVoiceTranscript(fullPreview);
-      // The "remainder" is everything after what has been officially finalized/committed
-      accumulatedTranscriptRef.current = fullPreview.substring(finalTextSoFar.length);
+      accumulatedTranscriptRef.current = fullPreview;
     };
 
     recognition.onerror = (e) => {
@@ -504,19 +484,18 @@ export default function HomePage() {
     };
 
     recognition.onend = () => {
-      // Commit the last remaining part that was still 'interim' when the user released
-      const remainingText = accumulatedTranscriptRef.current;
-      if (remainingText && remainingText.trim()) {
+      // COMMIT ONLY ON END: absolutely no repetition
+      const finalText = accumulatedTranscriptRef.current;
+      if (finalText && finalText.trim()) {
         setPrompt(prev => {
           const sep = prev.trim() ? ' ' : '';
-          return prev + sep + remainingText.trim();
+          return prev + sep + finalText.trim();
         });
       }
 
       setIsListening(false);
       setVoiceTranscript('');
       accumulatedTranscriptRef.current = '';
-      lastCommittedIndexRef.current = -1;
     };
 
     recognitionRef.current = recognition;
