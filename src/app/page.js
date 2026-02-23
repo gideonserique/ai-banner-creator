@@ -63,6 +63,7 @@ export default function HomePage() {
   const resultsRef = useRef(null);
   const recognitionRef = useRef(null);
   const accumulatedTranscriptRef = useRef('');
+  const isManualStopRef = useRef(false);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -448,6 +449,7 @@ export default function HomePage() {
     setVoiceError('');
     setVoiceTranscript('');
     accumulatedTranscriptRef.current = '';
+    isManualStopRef.current = false;
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
@@ -472,9 +474,12 @@ export default function HomePage() {
 
     recognition.onerror = (e) => {
       if (e.error === 'aborted') return;
+      // If it's a 'no-speech' error, we don't want to show it as a red error block 
+      // if we are going to auto-restart anyway.
+      if (e.error === 'no-speech') return;
+
       const msgs = {
         'not-allowed': 'Permissão de microfone negada.',
-        'no-speech': 'Nenhuma fala detectada.',
         'network': 'Erro de rede.',
       };
       setVoiceError(msgs[e.error] || `Erro: ${e.error}`);
@@ -483,7 +488,7 @@ export default function HomePage() {
     };
 
     recognition.onend = () => {
-      // COMMIT ONLY ON END: absolutely no repetition
+      // COMMIT current chunk
       const finalText = accumulatedTranscriptRef.current;
       if (finalText && finalText.trim()) {
         setPrompt(prev => {
@@ -492,9 +497,24 @@ export default function HomePage() {
         });
       }
 
-      setIsListening(false);
-      setVoiceTranscript('');
+      // Clear current chunk ref after commit
       accumulatedTranscriptRef.current = '';
+
+      // AUTO-RESTART logic:
+      // If it wasn't a manual stop (clicked by user), restart immediately
+      if (!isManualStopRef.current) {
+        console.log('[Voice] Auto-restarting session...');
+        try {
+          recognition.start();
+        } catch (err) {
+          // If start fails (e.g. already starting), we try again in startVoice
+          console.error('[Voice] Failed to auto-restart:', err);
+          setIsListening(false);
+        }
+      } else {
+        setIsListening(false);
+        setVoiceTranscript('');
+      }
     };
 
     recognitionRef.current = recognition;
@@ -512,6 +532,7 @@ export default function HomePage() {
 
   const stopVoice = (e) => {
     if (e && e.cancelable) e.preventDefault();
+    isManualStopRef.current = true; // Mark as manual to prevent auto-restart
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
