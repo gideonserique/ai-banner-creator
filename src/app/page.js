@@ -62,6 +62,7 @@ export default function HomePage() {
   const cameraInputRef = useRef(null);
   const resultsRef = useRef(null);
   const recognitionRef = useRef(null);
+  const accumulatedTranscriptRef = useRef('');
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -447,6 +448,7 @@ export default function HomePage() {
 
     setVoiceError('');
     setVoiceTranscript('');
+    accumulatedTranscriptRef.current = '';
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
@@ -463,20 +465,15 @@ export default function HomePage() {
     };
 
     recognition.onresult = (event) => {
-      let interim = '';
-      let finalText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) finalText += t;
-        else interim += t;
+      let fullTranscript = '';
+
+      // Build the total final and interim text from scratch for this current session
+      for (let i = 0; i < event.results.length; i++) {
+        fullTranscript += event.results[i][0].transcript;
       }
-      setVoiceTranscript(interim || finalText);
-      if (finalText) {
-        setPrompt(prev => {
-          const sep = prev.trim() ? ' ' : '';
-          return prev + sep + finalText.trim();
-        });
-      }
+
+      setVoiceTranscript(fullTranscript);
+      accumulatedTranscriptRef.current = fullTranscript;
     };
 
     recognition.onerror = (e) => {
@@ -492,8 +489,20 @@ export default function HomePage() {
     };
 
     recognition.onend = () => {
+      // COMMIT ONLY ON END: prevent repetition
+      const finalText = accumulatedTranscriptRef.current;
+      if (finalText && finalText.trim()) {
+        setPrompt(prev => {
+          const trimmedText = finalText.trim();
+          // Check if we already have some text and add space
+          const sep = prev.trim() ? ' ' : '';
+          return prev + sep + trimmedText;
+        });
+      }
+
       setIsListening(false);
       setVoiceTranscript('');
+      accumulatedTranscriptRef.current = '';
     };
 
     recognitionRef.current = recognition;
