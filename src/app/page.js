@@ -63,6 +63,7 @@ export default function HomePage() {
   const resultsRef = useRef(null);
   const recognitionRef = useRef(null);
   const accumulatedTranscriptRef = useRef('');
+  const lastCommittedIndexRef = useRef(-1);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -437,7 +438,6 @@ export default function HomePage() {
   };
 
   const startVoice = (e) => {
-    // Prevent default to avoid focus issues on mobile
     if (e && e.cancelable) e.preventDefault();
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -449,35 +449,50 @@ export default function HomePage() {
     setVoiceError('');
     setVoiceTranscript('');
     accumulatedTranscriptRef.current = '';
+    lastCommittedIndexRef.current = -1;
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
     recognition.interimResults = true;
-    recognition.continuous = true; // Use continuous for better long-press experience
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsListening(true);
-      // Optional: vibration feedback for mobile haptics
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(50);
       }
     };
 
     recognition.onresult = (event) => {
-      let fullTranscript = '';
+      let fullPreview = '';
+      let finalTextSoFar = '';
 
-      // Build the total final and interim text from scratch for this current session
       for (let i = 0; i < event.results.length; i++) {
-        fullTranscript += event.results[i][0].transcript;
+        const result = event.results[i];
+        const text = result[0].transcript;
+        fullPreview += text;
+
+        if (result.isFinal) {
+          finalTextSoFar += text;
+          // If this index is newly final and we haven't committed it yet
+          if (i > lastCommittedIndexRef.current) {
+            setPrompt(prev => {
+              const sep = prev.trim() ? ' ' : '';
+              return prev + sep + text.trim();
+            });
+            lastCommittedIndexRef.current = i;
+          }
+        }
       }
 
-      setVoiceTranscript(fullTranscript);
-      accumulatedTranscriptRef.current = fullTranscript;
+      setVoiceTranscript(fullPreview);
+      // The "remainder" is everything after what has been officially finalized/committed
+      accumulatedTranscriptRef.current = fullPreview.substring(finalTextSoFar.length);
     };
 
     recognition.onerror = (e) => {
-      if (e.error === 'aborted') return; // Ignore manual stop
+      if (e.error === 'aborted') return;
       const msgs = {
         'not-allowed': 'Permissão de microfone negada.',
         'no-speech': 'Nenhuma fala detectada.',
@@ -489,20 +504,19 @@ export default function HomePage() {
     };
 
     recognition.onend = () => {
-      // COMMIT ONLY ON END: prevent repetition
-      const finalText = accumulatedTranscriptRef.current;
-      if (finalText && finalText.trim()) {
+      // Commit the last remaining part that was still 'interim' when the user released
+      const remainingText = accumulatedTranscriptRef.current;
+      if (remainingText && remainingText.trim()) {
         setPrompt(prev => {
-          const trimmedText = finalText.trim();
-          // Check if we already have some text and add space
           const sep = prev.trim() ? ' ' : '';
-          return prev + sep + trimmedText;
+          return prev + sep + remainingText.trim();
         });
       }
 
       setIsListening(false);
       setVoiceTranscript('');
       accumulatedTranscriptRef.current = '';
+      lastCommittedIndexRef.current = -1;
     };
 
     recognitionRef.current = recognition;
