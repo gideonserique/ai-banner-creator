@@ -31,29 +31,36 @@ export async function POST(request) {
 
     // ── Generation Limit Check (for logged-in users) ──────────────────────
     if (userId) {
-      const { data: profileData, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('subscription_tier, generations_count')
-        .eq('id', userId)
-        .single();
+      const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUser(userId);
+      const isAdmin = authUser?.email === 'gideongsr94@gmail.com';
 
-      if (profileError) {
-        console.error('[LIMIT CHECK] Failed to fetch profile:', profileError);
-      } else {
-        const tier = profileData?.subscription_tier || 'free';
-        const count = profileData?.generations_count || 0;
-        const limit = TIER_LIMITS[tier];
+      if (!isAdmin) {
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .select('subscription_tier, generations_count')
+          .eq('id', userId)
+          .single();
 
-        if (limit !== null && count >= limit) {
-          console.log(`[LIMIT] User ${userId} on tier "${tier}" hit limit (${count}/${limit})`);
-          return NextResponse.json({
-            error: 'LIMIT_REACHED',
-            tier,
-            limit,
-            count,
-            message: `Você atingiu o limite de ${limit} artes do seu plano. Faça upgrade para continuar criando!`,
-          }, { status: 429 });
+        if (profileError) {
+          console.error('[LIMIT CHECK] Failed to fetch profile:', profileError);
+        } else {
+          const tier = profileData?.subscription_tier || 'free';
+          const count = profileData?.generations_count || 0;
+          const limit = TIER_LIMITS[tier];
+
+          if (limit !== null && count >= limit) {
+            console.log(`[LIMIT] User ${userId} on tier "${tier}" hit limit (${count}/${limit})`);
+            return NextResponse.json({
+              error: 'LIMIT_REACHED',
+              tier,
+              limit,
+              count,
+              message: `Você atingiu o limite de ${limit} artes do seu plano. Faça upgrade para continuar criando!`,
+            }, { status: 429 });
+          }
         }
+      } else {
+        console.log(`[ADMIN] User ${userId} (${authUser?.email}) bypassing limits.`);
       }
     }
 

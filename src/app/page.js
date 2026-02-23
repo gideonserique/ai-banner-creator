@@ -51,11 +51,13 @@ export default function HomePage() {
     logoUrl: '',
     companyName: '',
     subscriptionTier: 'free',
-    generationsCount: 0
+    generationsCount: 0,
+    isAdmin: false
   });
   const [showPreGenModal, setShowPreGenModal] = useState(false);
   const [showPostGenModal, setShowPostGenModal] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [guestMode, setGuestMode] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -158,11 +160,15 @@ export default function HomePage() {
         .single();
 
       if (data) {
+        const currentUser = (await supabase.auth.getSession()).data.session?.user;
+        const isAdmin = currentUser?.email === 'gideongsr94@gmail.com';
+
         setUserData({
           companyName: data.company_name || '',
           logoUrl: data.logo_url || '',
-          subscriptionTier: data.subscription_tier || 'free',
-          generationsCount: data.generations_count || 0
+          subscriptionTier: isAdmin ? 'unlimited_annual' : (data.subscription_tier || 'free'),
+          generationsCount: data.generations_count || 0,
+          isAdmin: isAdmin
         });
       }
     } catch (e) {
@@ -187,9 +193,10 @@ export default function HomePage() {
     if (!prompt.trim()) return;
 
     // Client-side fast-path: block limited users who already hit their cap
+    // ADMIN BYPASS: Allow everything for the admin email
     const tierLimits = { free: 5, starter: 20, premium: 20 };
     const localLimit = tierLimits[userData.subscriptionTier];
-    if (user && localLimit !== undefined && userData.generationsCount >= localLimit) {
+    if (user && !userData.isAdmin && localLimit !== undefined && userData.generationsCount >= localLimit) {
       setShowLimitModal(true);
       return;
     }
@@ -654,15 +661,13 @@ export default function HomePage() {
             </button>
 
             {/* WhatsApp Style Mic Button */}
-            {userData.subscriptionTier === 'free' ? (
-              // Locked for free users
+            {(userData.subscriptionTier === 'free' && !userData.isAdmin) ? (
+              // Locked for free users (Admin bypasses)
               <button
                 type="button"
                 className={styles.voiceBtn}
                 onClick={() => {
-                  setError('O Comando por Voz está disponível a partir do Plano Starter. Faça upgrade para liberar esta e outras funções premium!');
-                  // Optional: focus user on upgrade path
-                  setTimeout(() => { if (confirm('Deseja ver os planos agora?')) window.location.href = '/profile'; }, 2000);
+                  setShowVoiceModal(true);
                 }}
                 title="Comando por Voz (PRO). Clique para ver planos."
                 style={{ opacity: 0.7, cursor: 'pointer' }}
@@ -916,6 +921,41 @@ export default function HomePage() {
                 <button
                   className={styles.secondaryBtn}
                   onClick={() => setShowLimitModal(false)}
+                  style={{ background: 'transparent', border: 'none' }}
+                >
+                  Talvez mais tarde
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {
+        showVoiceModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalContent} style={{ maxWidth: '420px', textAlign: 'center' }}>
+              <span style={{ fontSize: '40px' }}>🎤</span>
+              <h2 className={styles.modalTitle} style={{ marginTop: '10px' }}>Comando por Voz</h2>
+              <p className={styles.modalSub} style={{ margin: '15px 0' }}>
+                A criação de artes por voz é uma função <strong>exclusiva</strong> para assinantes.
+                Economize tempo e crie artes incríveis apenas falando!
+              </p>
+              <div style={{ textAlign: 'left', marginBottom: '20px', fontSize: '14px', background: 'rgba(139, 92, 246, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                <p style={{ marginBottom: '10px', fontWeight: '600' }}>Liberte seu potencial com o Starter:</p>
+                <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <li>🎤 Comando por Voz ilimitado</li>
+                  <li>🖼️ 20 artes profissionais por mês</li>
+                  <li>✨ Escritor de Legendas com IA</li>
+                  <li>🚀 Suporte priorizado</li>
+                </ul>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Link href="/profile" className={styles.primaryBtn}>
+                  Ver Planos e Upgrade
+                </Link>
+                <button
+                  className={styles.secondaryBtn}
+                  onClick={() => setShowVoiceModal(false)}
                   style={{ background: 'transparent', border: 'none' }}
                 >
                   Talvez mais tarde

@@ -137,16 +137,18 @@ export default function ProfilePage() {
                     .single();
 
                 if (data) {
+                    const isAdmin = session.user.email === 'gideongsr94@gmail.com';
                     setProfile({
                         full_name: data.full_name || '',
                         company_name: data.company_name || '',
                         whatsapp: data.whatsapp || '',
                         logo_url: data.logo_url || '',
-                        subscription_tier: data.subscription_tier || 'free',
+                        subscription_tier: isAdmin ? 'unlimited_annual' : (data.subscription_tier || 'free'),
                         generations_count: data.generations_count || 0,
                         stripe_customer_id: data.stripe_customer_id || '',
                         stripe_subscription_id: data.stripe_subscription_id || '',
                         subscription_expires_at: data.subscription_expires_at || null,
+                        isAdmin: isAdmin,
                     });
                 }
             }
@@ -236,7 +238,13 @@ export default function ProfilePage() {
             });
             const data = await response.json();
             if (data.url) { window.location.href = data.url; }
-            else throw new Error(data.error || 'Erro ao abrir portal');
+            else {
+                let msg = data.error || 'Erro ao abrir portal';
+                if (msg.includes('No such customer') && msg.includes('test mode')) {
+                    msg = '⚠️ Erro de sincronização: Este usuário possui um ID do Stripe em modo TESTE, mas você está em modo LIVE (ou vice-versa). Para corrigir, limpe o campo stripe_customer_id deste usuário no Supabase.';
+                }
+                throw new Error(msg);
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -271,10 +279,10 @@ export default function ProfilePage() {
     }
 
     const currentPlan = PLANS.find(p => p.slug === profile.subscription_tier) || PLANS[0];
-    const isPaid = PAID_PLANS.includes(profile.subscription_tier);
-    const isUnlimited = profile.subscription_tier === 'unlimited_monthly' || profile.subscription_tier === 'unlimited_annual';
+    const isPaid = PAID_PLANS.includes(profile.subscription_tier) || profile.isAdmin;
+    const isUnlimited = profile.subscription_tier === 'unlimited_monthly' || profile.subscription_tier === 'unlimited_annual' || profile.isAdmin;
     const usagePercent = isUnlimited ? 0 : Math.min(100, ((profile.generations_count || 0) / (currentPlan.limit || 5)) * 100);
-    const renewalDate = formatDate(profile.subscription_expires_at);
+    const renewalDate = profile.isAdmin ? 'Acesso Vitalício Admin' : formatDate(profile.subscription_expires_at);
 
     return (
         <main className={styles.main}>
@@ -310,12 +318,16 @@ export default function ProfilePage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '24px' }}>{currentPlan.icon}</span>
-                                <span style={{ fontSize: '13px', fontWeight: '600', color: currentPlan.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plano Atual</span>
+                                <span style={{ fontSize: '24px' }}>{profile.isAdmin ? '🛠️' : currentPlan.icon}</span>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: profile.isAdmin ? '#3b82f6' : currentPlan.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    {profile.isAdmin ? 'Acesso Admin' : 'Plano Atual'}
+                                </span>
                             </div>
-                            <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 4px', color: 'var(--text-primary)' }}>{currentPlan.name}</h2>
+                            <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 4px', color: 'var(--text-primary)' }}>
+                                {profile.isAdmin ? 'Administrador' : currentPlan.name}
+                            </h2>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
-                                {isUnlimited ? 'Criações ilimitadas ✓ Voz ✓ Legendas IA ✓' : `${currentPlan.limitLabel} · Suporte incluído`}
+                                {profile.isAdmin ? 'Acesso total ilimitado liberado ✓' : (isUnlimited ? 'Criações ilimitadas ✓ Voz ✓ Legendas IA ✓' : `${currentPlan.limitLabel} · Suporte incluído`)}
                             </p>
                         </div>
                         <div style={{ textAlign: 'right' }}>
