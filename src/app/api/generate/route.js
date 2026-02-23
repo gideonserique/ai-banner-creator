@@ -31,7 +31,7 @@ export async function POST(request) {
 
     // ── Generation Limit Check (for logged-in users) ──────────────────────
     if (userId) {
-      const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUser(userId);
+      const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
       const isAdmin = authUser?.email === 'gideongsr94@gmail.com';
 
       if (!isAdmin) {
