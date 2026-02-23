@@ -657,7 +657,11 @@ export default function HomePage() {
 
             {/* Recording Feedback Overlay */}
             {isListening && (
-              <div className={styles.recordingOverlay}>
+              <div
+                className={styles.recordingOverlay}
+                onClick={toggleVoice}
+                title="Clique em qualquer lugar para parar"
+              >
                 <div className={styles.recordingPulse} />
                 <span className={styles.recordingText}>
                   Gravando áudio... Clique para parar

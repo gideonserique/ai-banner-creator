@@ -314,7 +314,13 @@
   gap: 12px;
   padding: 20px;
   animation: fadeIn 0.2s ease-out;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.recordingOverlay:hover {
+  background: rgba(15, 23, 42, 0.95);
 }
 
 .recordingPulse {
