@@ -152,24 +152,42 @@ OUTPUT:
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
-    // ── Retry Logic for Gemini 503 Errors ────────────────────────────────
+    // ── Retry & Fallback Logic for Gemini 503 Errors ──────────────────────
     let result;
     const maxRetries = 3;
-    let delay = 1000; // Começa com 1 segundo
+    let currentModelId = 'gemini-3-pro-image-preview';
 
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        result = await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
-        break; // Sucesso, sai do loop
-      } catch (err) {
-        const isTransientError = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
-        if (isTransientError && i < maxRetries - 1) {
-          console.warn(`[GEMINI] Erro 503 ou alta demanda (Tentativa ${i + 1}/${maxRetries}). Tentando novamente em ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= 2; // Backoff exponencial
-          continue;
+    async function attemptGeneration(modelId) {
+      const model = genAI.getGenerativeModel({ model: modelId });
+      let retryDelay = 1000;
+
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          console.log(`[GEMINI] Attempting generation with ${modelId} (Try ${i + 1}/${maxRetries})...`);
+          return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
+        } catch (err) {
+          const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
+          if (isTransient && i < maxRetries - 1) {
+            console.warn(`[GEMINI] Error 503 on ${modelId}. Retrying in ${retryDelay}ms...`);
+            await new Promise(r => setTimeout(r, retryDelay));
+            retryDelay *= 2;
+            continue;
+          }
+          throw err;
         }
-        throw err; // Se não for transitório ou atingir limite de retries, lança o erro
+      }
+    }
+
+    try {
+      result = await attemptGeneration(currentModelId);
+    } catch (err) {
+      const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
+      if (isTransient) {
+        console.error(`[GEMINI] ${currentModelId} failed after ${maxRetries} retries. Falling back to gemini-2.5-flash-image...`);
+        currentModelId = 'gemini-2.5-flash-image';
+        result = await attemptGeneration(currentModelId);
+      } else {
+        throw err;
       }
     }
 
