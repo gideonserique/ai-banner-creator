@@ -223,7 +223,14 @@ export default function AdminDashboard() {
                     <KPICard icon="📈" label="Conversão" value={`${kpis.conversionRate}%`} sub="free → premium" color="#fbbf24" highlight />
                     <KPICard icon="🎨" label="Banners" value={kpis.totalBanners} sub={`+${kpis.newBannersLast7d} esta semana`} />
                     <KPICard icon="📋" label="Legendas IA" value={kpis.totalCaptions} sub="captions criadas" color="#a78bfa" />
-                    <KPICard icon="🏆" label="MRR (R$)" value={(kpis.totalPremium * 29.9).toFixed(0)} sub={`R$29,90 × ${kpis.totalPremium}`} color="#22c55e" />
+                    <KPICard
+                        icon="🏆"
+                        label="MRR (R$)"
+                        value={kpis.mrr.toFixed(0)}
+                        sub={`Reflete todos os planos pagos`}
+                        color="#22c55e"
+                        highlight
+                    />
                     <KPICard icon="⚡" label="Média/User" value={kpis.avgBannersPerUser} sub="banners por usuário" />
                     <KPICard icon="⚠️" label="Sem geração" value={kpis.usersWithNoBanners} sub="cadastrou e sumiu" color="#ef4444" highlight={kpis.usersWithNoBanners > 0} />
                 </div>

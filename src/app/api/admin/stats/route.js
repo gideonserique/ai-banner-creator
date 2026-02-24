@@ -171,6 +171,14 @@ export async function GET(request) {
         const totalUsers = profiles.length;
         const paidTiers = ['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'];
         const totalPremium = profiles.filter(p => paidTiers.includes(p.subscription_tier)).length;
+
+        // Calculate MRR accurately based on tiers
+        const mrr = profiles.reduce((acc, p) => {
+            if (p.subscription_tier === 'starter' || p.subscription_tier === 'premium') return acc + 29.9;
+            if (p.subscription_tier === 'unlimited_monthly') return acc + 69.9;
+            if (p.subscription_tier === 'unlimited_annual') return acc + 49.9; // 598.8 / 12 months
+            return acc;
+        }, 0);
         const totalFree = totalUsers - totalPremium;
         const conversionRate = totalUsers > 0 ? ((totalPremium / totalUsers) * 100).toFixed(1) : 0;
         const totalBanners = banners.length;
@@ -217,7 +225,7 @@ export async function GET(request) {
 
         return NextResponse.json({
             kpis: {
-                totalUsers, totalPremium, totalFree, conversionRate,
+                totalUsers, totalPremium, totalFree, conversionRate, mrr,
                 totalBanners, totalCaptions, avgBannersPerUser,
                 newUsersLast7d, newBannersLast7d, usersWithNoBanners,
                 // Traffic
