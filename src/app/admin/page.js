@@ -411,7 +411,18 @@ export default function AdminDashboard() {
                                             <td style={{ padding: '10px 18px' }}>
                                                 <MiniBar value={p.generations_count || 0} max={maxBanners} />
                                             </td>
-                                            <td style={{ padding: '10px 18px', color: 'var(--text-secondary)', fontSize: '12px' }}>{p.whatsapp || '—'}</td>
+                                            <td style={{ padding: '10px 18px', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {p.whatsapp ? (
+                                                        <>
+                                                            <span>{p.whatsapp}</span>
+                                                            <a href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ fontSize: '14px', color: '#22c55e', textDecoration: 'none', background: 'rgba(34,197,94,0.1)', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }} title="Abrir conversa no WhatsApp">
+                                                                📱
+                                                            </a>
+                                                        </>
+                                                    ) : '—'}
+                                                </div>
+                                            </td>
                                             <td style={{ padding: '10px 18px', color: 'var(--text-secondary)', fontSize: '11px', whiteSpace: 'nowrap' }}>
                                                 {p.updated_at ? new Date(p.updated_at).toLocaleDateString('pt-BR') : '—'}
                                             </td>
