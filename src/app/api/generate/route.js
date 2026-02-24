@@ -64,7 +64,7 @@ export async function POST(request) {
       }
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-image-preview' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
 
     // Logo handling
     let brandImages = [];
