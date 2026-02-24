@@ -272,7 +272,9 @@ export default function AdminDashboard() {
                                             <div style={{ fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.company_name || p.full_name || 'Usuário'}</div>
                                             <MiniBar value={p.generations_count || 0} max={maxBanners} />
                                         </div>
-                                        <span style={{ fontSize: '11px', color: p.subscription_tier === 'premium' ? '#22c55e' : 'var(--text-secondary)', fontWeight: 700 }}>{p.subscription_tier === 'premium' ? '💎' : '🆓'}</span>
+                                        <span style={{ fontSize: '11px', color: ['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(p.subscription_tier) ? '#22c55e' : 'var(--text-secondary)', fontWeight: 700 }}>
+                                            {['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(p.subscription_tier) ? '💎' : '🆓'}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -386,9 +388,18 @@ export default function AdminDashboard() {
                                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{p.full_name || '—'}</div>
                                             </td>
                                             <td style={{ padding: '10px 18px' }}>
-                                                <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: p.subscription_tier === 'premium' ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.06)', color: p.subscription_tier === 'premium' ? '#22c55e' : 'var(--text-secondary)', border: `1px solid ${p.subscription_tier === 'premium' ? '#22c55e44' : 'var(--border)'}` }}>
-                                                    {p.subscription_tier === 'premium' ? '💎 Premium' : '🆓 Free'}
-                                                </span>
+                                                {(() => {
+                                                    const isPaid = ['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(p.subscription_tier);
+                                                    const label = p.subscription_tier === 'starter' ? '💎 Starter' :
+                                                        p.subscription_tier === 'unlimited_monthly' ? '💎 Ilimitado Mensal' :
+                                                            p.subscription_tier === 'unlimited_annual' ? '💎 Ilimitado Anual' :
+                                                                p.subscription_tier === 'premium' ? '💎 Premium' : '🆓 Gratuito';
+                                                    return (
+                                                        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: isPaid ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.06)', color: isPaid ? '#22c55e' : 'var(--text-secondary)', border: `1px solid ${isPaid ? '#22c55e44' : 'var(--border)'}` }}>
+                                                            {label}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </td>
                                             <td style={{ padding: '10px 18px' }}>
                                                 <MiniBar value={p.generations_count || 0} max={maxBanners} />
@@ -461,8 +472,8 @@ export default function AdminDashboard() {
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {item.user_name}
-                                        <span style={{ marginLeft: '8px', padding: '1px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700, background: item.subscription_tier === 'premium' ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.06)', color: item.subscription_tier === 'premium' ? '#22c55e' : 'var(--text-secondary)' }}>
-                                            {item.subscription_tier === 'premium' ? '💎' : '🆓'}
+                                        <span style={{ marginLeft: '8px', padding: '1px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700, background: ['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(item.subscription_tier) ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.06)', color: ['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(item.subscription_tier) ? '#22c55e' : 'var(--text-secondary)' }}>
+                                            {['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(item.subscription_tier) ? '💎' : '🆓'}
                                         </span>
                                     </div>
                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{item.prompt || '—'}</div>

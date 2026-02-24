@@ -169,7 +169,8 @@ export async function GET(request) {
 
         // --- User-level stats ---
         const totalUsers = profiles.length;
-        const totalPremium = profiles.filter(p => p.subscription_tier === 'premium').length;
+        const paidTiers = ['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'];
+        const totalPremium = profiles.filter(p => paidTiers.includes(p.subscription_tier)).length;
         const totalFree = totalUsers - totalPremium;
         const conversionRate = totalUsers > 0 ? ((totalPremium / totalUsers) * 100).toFixed(1) : 0;
         const totalBanners = banners.length;
