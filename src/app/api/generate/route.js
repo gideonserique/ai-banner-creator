@@ -120,7 +120,7 @@ EXEMPLOS DE ADAPTAÇÃO POR SEGMENTO:
 - Moda/Vestuário → Estilo editorial, paleta sofisticada, lifestyle, fontes elegantes
 - Beleza/Estética → Tom rosê/dourado/nude, elegância, texturas suaves, luz suave difusa
 - Academia/Fitness → Energia, cores vibrantes, tipografia bold, contraste alto
-- Saúde/Clínica → Profissionalism, azul/verde, clean, transmite confiança
+- Saúde/Clínica → Profissionalism, azul/verde, clean, transmits confiança
 - Serviços/Prestador → Foco no benefício, tipografia clara, call-to-action forte
 - Imóveis → Foto de impacto, tons sóbrios, sofisticação, detalhes arquitetônicos
 
@@ -152,7 +152,26 @@ OUTPUT:
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
-    const result = await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
+    // ── Retry Logic for Gemini 503 Errors ────────────────────────────────
+    let result;
+    const maxRetries = 3;
+    let delay = 1000; // Começa com 1 segundo
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        result = await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
+        break; // Sucesso, sai do loop
+      } catch (err) {
+        const isTransientError = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
+        if (isTransientError && i < maxRetries - 1) {
+          console.warn(`[GEMINI] Erro 503 ou alta demanda (Tentativa ${i + 1}/${maxRetries}). Tentando novamente em ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Backoff exponencial
+          continue;
+        }
+        throw err; // Se não for transitório ou atingir limite de retries, lança o erro
+      }
+    }
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -244,6 +263,10 @@ BRIEFING DO CLIENTE: "${prompt}"`;
 
   } catch (error) {
     console.error('Erro na geração:', error);
-    return NextResponse.json({ error: `Erro: ${error.message}.` }, { status: 500 });
+    const isTransient = error.message?.includes('503') || error.status === 503 || error.message?.includes('high demand');
+    const userMessage = isTransient
+      ? 'O sistema está com alta demanda no momento. Por favor, aguarde alguns segundos e tente novamente.'
+      : `Erro: ${error.message}.`;
+    return NextResponse.json({ error: userMessage }, { status: isTransient ? 503 : 500 });
   }
 }
