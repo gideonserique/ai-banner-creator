@@ -168,6 +168,28 @@ export default function ProfilePage() {
         reader.readAsDataURL(file);
     };
 
+    const handleDeleteLogo = async () => {
+        const ok = window.confirm('Deseja realmente remover o logotipo?');
+        if (!ok) return;
+
+        setSaving(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ logo_url: null })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            setProfile(prev => ({ ...prev, logo_url: '' }));
+            setSuccess('Logotipo removido com sucesso!');
+        } catch (err) {
+            setError('Erro ao remover logotipo: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         setSaving(true); setError(''); setSuccess('');
@@ -505,9 +527,26 @@ export default function ProfilePage() {
                                     <span style={{ fontSize: '30px', opacity: 0.3 }}>🏢</span>
                                 )}
                             </div>
-                            <button className={styles.uploadBtnSmall} onClick={() => fileInputRef.current?.click()}>
-                                {profile.logo_url ? 'Trocar Logotipo' : 'Adicionar Logotipo'}
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                                <button className={styles.uploadBtnSmall} onClick={() => fileInputRef.current?.click()}>
+                                    {profile.logo_url ? 'Trocar Logotipo' : 'Adicionar Logotipo'}
+                                </button>
+                                {profile.logo_url && (
+                                    <button
+                                        onClick={handleDeleteLogo}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#ef4444',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        Remover Logotipo
+                                    </button>
+                                )}
+                            </div>
                             <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleLogoUpload} />
                         </div>
                         <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>

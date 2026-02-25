@@ -78,6 +78,13 @@ export async function POST(request) {
 
     const hasProductImages = imageParts.length > 0;
 
+    const brandingInstruction = logoUrl
+      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Utilize o logotipo fornecido nos anexos de forma natural e profissional (geralmente nos cantos ou centro inferior do banner).
+         CORES: Baseie a paleta de cores do banner nas cores do logotipo. Se o BRIEFING indicar cores específicas, elas têm PRIORIDADE TOTAL.`
+      : (companyName
+        ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Exiba o nome da empresa/marca "${companyName}" de forma clara e elegante, usando tipografia premium condizente com o segmento detectado.`
+        : 'IDENTIDADE VISUAL: Se detectado algum nome de marca no briefing, exiba-o com destaque e elegância.');
+
     const productImageInstruction = hasProductImages
       ? `TRATAMENTO DA IMAGEM DO PRODUTO (OBRIGATÓRIO):
          - Você recebeu fotos reais do produto em anexo.
@@ -107,7 +114,7 @@ ETAPA 1 — CAPACIDADES E ESTILO
 1. DESIGN DE ELITE: Você cria imagens que causam uma reação "UAU" imediata. 
 2. ESPECIALISTA MULTI-SEGMENTO: Você adapta o estilo visual (fonts, cores, luz) perfeitamente ao nicho do cliente.
 3. MARKETING E PSICOLOGIA: Suas artes são máquinas de persuasão visual.
-4. REFERÊNCIAS: Interprete o briefing e as imagens em anexo (incluindo possíveis logotipos enviados pelo usuário) para integrá-los de forma harmônica.
+4. INTEGRAÇÃO DE BRANDING: ${brandingInstruction}
 
 ═══════════════════════════════════════════
 ETAPA 2 — DIRETRIZES DE EXECUÇÃO
@@ -123,9 +130,7 @@ OUTPUT:
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
-    // ── Optimized "Double-Shot" Logic (Sub-3.0 Priority) ──────────────────────
-    let result;
-    let currentModelId = 'gemini-3-pro-image-preview'; // Primary Elite Model
+    let currentModelId = 'gemini-3-pro-image-preview'; // Exclusive Peak Model
 
     async function attemptGeneration(modelId) {
       const model = genAI.getGenerativeModel({ model: modelId });
@@ -133,23 +138,12 @@ BRIEFING DO CLIENTE: "${prompt}"`;
       return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
     }
 
+    let result;
     try {
-      // SHOT 1: Gemini 2.5 Flash Image (The requested effective sub-3.0)
       result = await attemptGeneration(currentModelId);
     } catch (err) {
-      const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
-      if (isTransient) {
-        // SHOT 2: Gemini 2.5 Flash Image (Safe Backup)
-        currentModelId = 'gemini-2.5-flash-image';
-        try {
-          result = await attemptGeneration(currentModelId);
-        } catch (err2) {
-          console.error(`[GEMINI] ❌ Both models failed.`);
-          throw new Error('GEN_FAILED_ALL_MODELS');
-        }
-      } else {
-        throw err;
-      }
+      console.error(`[GEMINI] ❌ Elite model failure:`, err.message);
+      throw err;
     }
 
     const stream = new ReadableStream({
