@@ -206,7 +206,7 @@ export async function GET(request) {
                 ...b,
                 user_name: profile?.company_name || profile?.full_name || 'Usuário',
                 subscription_tier: profile?.subscription_tier || 'free',
-                model_id: b.model_id || 'gemini-3-pro-image-preview',
+                model_id: b.model_id,
             };
         });
 

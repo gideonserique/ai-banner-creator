@@ -58,6 +58,8 @@ export default function HomePage() {
   const [showPostGenModal, setShowPostGenModal] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [isHighDemand, setIsHighDemand] = useState(false);
   const [guestMode, setGuestMode] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -143,7 +145,7 @@ export default function HomePage() {
     if (generatingSince) {
       const diff = Date.now() - parseInt(generatingSince);
       if (diff < 120000) { // 2 minutos
-        setError('Você tinha uma geração em andamento! Ela está sendo processada no servidor e aparecerá na sua Galeria em instantes. 🚀');
+        setError('Uma geração anterior foi detectada. Se ela foi concluída, aparecerá na sua Galeria em instantes. 🚀');
       }
       localStorage.removeItem('banneria_generating_timestamp');
     }
@@ -303,7 +305,14 @@ export default function HomePage() {
       }, 300);
     } catch (e) {
       console.error(e);
-      setError(e.message || 'Falha de conexão com o servidor.');
+      if (e.message === 'GEN_FAILED_ALL_MODELS' || e.message?.includes('high demand') || e.message?.includes('503')) {
+        setIsHighDemand(true);
+        setShowErrorModal(true);
+      } else {
+        setIsHighDemand(false);
+        setError(e.message || 'Falha de conexão com o servidor.');
+        setShowErrorModal(true);
+      }
     } finally {
       setTimeout(() => {
         setLoading(false);
@@ -803,7 +812,43 @@ export default function HomePage() {
           ))}
         </div>
 
-        {error && <div className={styles.errorMessage}>{error}</div>}
+        {/* Error Modal (Beautiful UI/UX) */}
+        {showErrorModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalContent} style={{ maxWidth: '440px', textAlign: 'center', border: `1px solid ${isHighDemand ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+              <span style={{ fontSize: '48px' }}>{isHighDemand ? '🌪️' : '⚠️'}</span>
+              <h2 className={styles.modalTitle} style={{ marginTop: '12px', fontSize: '24px' }}>
+                {isHighDemand ? 'Sistema Sobrecarregado' : 'Ops! Algo deu errado'}
+              </h2>
+              <p className={styles.modalSub} style={{ margin: '16px 0', lineHeight: '1.6', fontSize: '15px' }}>
+                {isHighDemand
+                  ? 'Nossos motores de IA estão com altíssima demanda neste momento e não conseguiram processar sua arte após duas tentativas.'
+                  : (error || 'Não conseguimos processar sua solicitação agora. Por favor, tente novamente em alguns instantes.')}
+              </p>
+
+              {isHighDemand && (
+                <div style={{ textAlign: 'left', marginBottom: '24px', fontSize: '14px', background: 'rgba(245,158,11,0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(245,158,11,0.15)' }}>
+                  <p style={{ marginBottom: '10px', fontWeight: '700', color: '#f59e0b', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💡 Dicas para sucesso:</p>
+                  <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)' }}>
+                    <li>• Aguarde 10 a 15 segundos antes de tentar novamente.</li>
+                    <li>• Tente simplificar um pouco o seu texto/prompt.</li>
+                    <li>• Certifique-se de que suas fotos não são muito pesadas.</li>
+                  </ul>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  className={styles.primaryBtn}
+                  onClick={() => { setShowErrorModal(false); setError(null); }}
+                  style={{ background: isHighDemand ? '#f59e0b' : 'linear-gradient(135deg, #ef4444, #dc2626)', boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}
+                >
+                  Entendi, vou tentar de novo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && (
           <div className={styles.progressContainer}>

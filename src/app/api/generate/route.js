@@ -152,41 +152,31 @@ OUTPUT:
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
-    // ── Retry & Fallback Logic for Gemini 503 Errors ──────────────────────
+    // ── Streamlined "Double-Shot" Logic ──────────────────────
     let result;
-    const maxRetriesPrimary = 5; // Reinforced priority for 3.0 Pro
-    const maxRetriesFallback = 2; // Short retry for fallback
     let currentModelId = 'gemini-3-pro-image-preview';
 
-    async function attemptGeneration(modelId, maxRetries) {
+    async function attemptGeneration(modelId) {
       const model = genAI.getGenerativeModel({ model: modelId });
-      let retryDelay = 1500; // Increased base delay
-
-      for (let i = 0; i < maxRetries; i++) {
-        try {
-          console.log(`[GEMINI] Attempting generation with ${modelId} (Try ${i + 1}/${maxRetries})...`);
-          return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
-        } catch (err) {
-          const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
-          if (isTransient && i < maxRetries - 1) {
-            console.warn(`[GEMINI] Error 503 on ${modelId}. Retrying in ${retryDelay}ms...`);
-            await new Promise(r => setTimeout(r, retryDelay));
-            retryDelay *= 1.5; // Slightly slower backoff
-            continue;
-          }
-          throw err;
-        }
-      }
+      console.log(`[GEMINI] 🚀 Critical Attempt with ${modelId}...`);
+      return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
     }
 
     try {
-      result = await attemptGeneration(currentModelId, maxRetriesPrimary);
+      // SHOT 1: Gemini 3.0 Pro (Priority)
+      result = await attemptGeneration(currentModelId);
     } catch (err) {
       const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
       if (isTransient) {
-        console.error(`[GEMINI] ${currentModelId} failed after ${maxRetriesPrimary} retries. Falling back to gemini-2.5-flash-image...`);
+        console.warn(`[GEMINI] ⚠️ 3.0 Pro failed (High Demand). Switching to 2.5 Flash...`);
+        // SHOT 2: Gemini 2.5 Flash (Reliability)
         currentModelId = 'gemini-2.5-flash-image';
-        result = await attemptGeneration(currentModelId, maxRetriesFallback);
+        try {
+          result = await attemptGeneration(currentModelId);
+        } catch (err2) {
+          console.error(`[GEMINI] ❌ Both models failed.`);
+          throw new Error('GEN_FAILED_ALL_MODELS');
+        }
       } else {
         throw err;
       }
