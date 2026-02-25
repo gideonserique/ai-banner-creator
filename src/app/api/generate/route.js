@@ -100,165 +100,100 @@ export async function POST(request) {
          - O usuário NÃO enviou foto. Gere uma imagem fotorrealista, de alta qualidade e profissional do produto ou serviço descrito no briefing.
          - Use iluminação de estúdio, ângulo favorável e render de muito alta qualidade, como se fosse uma foto profissional tirada para publicidade.`;
 
-    const systemPrompt = `Você é um Designer Especialista em Banners para Redes Sociais de Classe Mundial.
-Você domina criação de materiais publicitários de alta performance para QUALQUER tipo de negócio: varejo, tecnologia, moda, beleza, alimentação, serviços, saúde, educação, imóveis, automotivo, e muito mais.
+    const systemPrompt = `Design a professional ${dimensions.label} social media banner (${dimensions.width}x${dimensions.height}).
+    
+    CRITICAL RULES:
+    1. FULL BLEED: The design MUST fill the entire canvas. No borders or margins.
+    2. CONTENT: Use ONLY the following information: "${prompt}". Do not invent details.
+    3. LANGUAGE: All text must be in perfect Brazilian Portuguese.
+    4. NO PLACEHOLDERS: Do not include phrases like "image not included" or technical metadata.
+    5. QUALITY: Professional studio lighting, premium typography, and harmonious colors.
+    
+    ${productImageInstruction}
+    ${brandingInstruction}
+    
+    OUTPUT: Return the banner as a single, high-quality image.`;
 
-Sua tarefa é gerar 1 ÚNICO banner publicitário profissional de resolução 4K (${dimensions.width}x${dimensions.height}), formato "${dimensions.label}".
-
-═══════════════════════════════════════════
-ETAPA 1 — ANÁLISE INTELIGENTE DO SEGMENTO
-═══════════════════════════════════════════
-Antes de criar, analise CUIDADOSAMENTE:
-• O BRIEFING do usuário (texto, produto, serviço descrito)  
-• As IMAGENS enviadas (se houver) — identifique o produto, categoria e contexto visual
-
-Com essa análise, determine o SEGMENTO (ex: eletrônico, restaurante, salão de beleza, academia, clínica, imobiliária, loja de roupas, etc.) e adapte COMPLETAMENTE o design:
-
-EXEMPLOS DE ADAPTAÇÃO POR SEGMENTO:
-- Eletrônico/Tecnologia → Design clean, cores frias (azul/preto/branco), tipografia tech, render 3D, fundo escuro ou gradiente futurista
-- Alimentação/Delivery → Cores quentes e apetitosas, iluminação "suculenta", close do produto, fundo rústico ou moderno
-- Moda/Vestuário → Estilo editorial, paleta sofisticada, lifestyle, fontes elegantes
-- Beleza/Estética → Tom rosê/dourado/nude, elegância, texturas suaves, luz suave difusa
-- Academia/Fitness → Energia, cores vibrantes, tipografia bold, contraste alto
-- Saúde/Clínica → Profissionalism, azul/verde, clean, transmits confiança
-- Serviços/Prestador → Foco no benefício, tipografia clara, call-to-action forte
-- Imóveis → Foto de impacto, tons sóbrios, sofisticação, detalhes arquitetônicos
-
-═══════════════════════════════════════════
-ETAPA 2 — EXECUÇÃO DO BANNER (REGRAS CRÍTICAS)
-═══════════════════════════════════════════
-
-DESIGN TELA CHEIA (FULL BLEED):
-- O design DEVE ocupar 100% da área do banner (${dimensions.width}x${dimensions.height}).
-- NUNCA gere o banner com bordas, margens brancas/pretas ou emoldurado dentro de outro fundo.
-- O plano de fundo e os elementos devem chegar até o limite extremo da imagem.
-
-${productImageInstruction}
-
-${brandingInstruction}
-
-INFORMAÇÕES E TEXTOS (FIDELIDADE TOTAL):
-- Inclua NO BANNER APENAS as informações que o usuário especificou no briefing: preços, telefone, promoções, etc.
-- NUNCA adicione frases de erro, avisos técnicos ou metadados como "Image not included", "Foto meramente ilustrativa" ou avisos de direitos autorais, A MENOS QUE o usuário tenha pedido explicitamente.
-- NUNCA invente informações fictícias (telefones falsos, links). Se a informação não está no briefing, não coloque no banner.
-- REVISÃO GRAMATICAL: Use EXCLUSIVAMENTE Português do Brasil. Revise 3 vezes a ortografia e acentuação antes de gerar. Erros de digitação são inaceitáveis.
-
-QUALIDADE TÉCNICA (OBRIGATÓRIO):
-- Composição visual profissional com hierarquia clara de informações
-- Tipografia premium e legível, adequada ao segmento
-- Cores harmoniosas e impactantes, alinhadas ao segmento detectado
-- Iluminação de produto de nível estúdio fotográfico profissional
-- Arte finalizada, sem elementos amadores ou mal posicionados
-
-OUTPUT:
-- Gere o banner DIRETAMENTE como imagem (inlineData) em ${dimensions.width}x${dimensions.height}px
-- NÃO escreva texto explicativo. Retorne SOMENTE a imagem.
-- Se o modo inlineData falhar, retorne APENAS o Base64 puro da imagem.
-
-BRIEFING DO CLIENTE: "${prompt}"`;
-
-    // ── Simplified Logic: GEMINI 3.0 PRO ONLY (Single Attempt) ──────────
-    let result;
+    // ── Simplified Logic: GEMINI 3.0 PRO ONLY (Single Attempt, Non-Streaming)
+    let finalModelResponse;
     const currentModelId = 'gemini-3-pro-image-preview';
 
     try {
-      console.log(`[GEMINI] Attempting generation with ${currentModelId}...`);
       const model = genAI.getGenerativeModel({ model: currentModelId });
-      result = await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
+      console.log(`[GEMINI] Generating banner with ${currentModelId}...`);
+
+      const result = await model.generateContent([systemPrompt, ...brandImages, ...imageParts]);
+      finalModelResponse = await result.response;
+      console.log('[GEMINI] Response received.');
     } catch (err) {
       console.error(`[GEMINI] ${currentModelId} failed.`, err);
       throw err;
     }
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        let fullText = '';
-        let foundImage = false;
-        let finalImageData = null;
+    let finalImageData = null;
+    let foundImage = false;
 
-        try {
-          for await (const chunk of result.stream) {
-            const parts = chunk.candidates?.[0]?.content?.parts;
-            if (parts) {
-              for (const part of parts) {
-                if (part.inlineData?.data) {
-                  const mime = part.inlineData.mimeType || 'image/jpeg';
-                  const data = `data:${mime};base64,${part.inlineData.data.trim()}`;
-                  finalImageData = data;
-                  controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
-                  foundImage = true;
-                } else if (part.text) {
-                  fullText += part.text;
-                }
-              }
-            }
-          }
-
-          if (!foundImage && fullText) {
-            console.log('[DEBUG] Full response text length:', fullText.length);
-            const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
-            const matches = fullText.match(b64Regex);
-            if (matches && matches.length > 0) {
-              let cleanM = matches[0];
-              if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
-              cleanM = cleanM.replace(/[\r\n\s]/g, '');
-              const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-              const data = `data:${mime};base64,${cleanM}`;
-              finalImageData = data;
-              controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
-              foundImage = true;
-            }
-          }
-
-          // SERVER-SIDE AUTO SAVE — logged user
-          if (foundImage && userId) {
-            console.log(`[SERVER-SAVE] Saving banner for user: ${userId}`);
-            const { error: saveError } = await supabaseAdmin.from('banners').insert([{
-              user_id: userId,
-              image_url: finalImageData,
-              prompt: prompt,
-              size: size,
-              model_id: currentModelId,
-            }]);
-            if (saveError) {
-              console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
-            } else {
-              console.log('[SERVER-SAVE] Banner successfully saved.');
-              // Increment generation counter (only matters for limited plans, harmless for unlimited)
-              const { error: countError } = await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
-              if (countError) console.error('[SERVER-SAVE] Failed to increment count:', countError);
-              else console.log('[SERVER-SAVE] Generation count incremented.');
-            }
-          }
-
-          // SERVER-SIDE AUTO SAVE — anonymous user
-          if (foundImage && !userId && sessionId) {
-            console.log(`[ANON-SAVE] Saving anonymous banner for session: ${sessionId}`);
-            const { error: anonError } = await supabaseAdmin.from('anonymous_banners').insert([{
-              session_id: sessionId,
-              image_url: finalImageData,
-              prompt: prompt,
-              size: size,
-              model_id: currentModelId,
-            }]);
-            if (anonError) console.error('[ANON-SAVE] Failed to save anonymous banner:', anonError);
-            else console.log('[ANON-SAVE] Anonymous banner saved.');
-          }
-
-          if (!foundImage) {
-            console.error('EXTRACTION FAILED. AI Response Text Length:', fullText.length);
-            controller.enqueue(new TextEncoder().encode(JSON.stringify({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }) + '\n'));
-          }
-
-          controller.close();
-        } catch (e) {
-          console.error('Stream error:', e);
-          controller.error(e);
+    // Extraction: Check inlineData first
+    const parts = finalModelResponse.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const mime = part.inlineData.mimeType || 'image/jpeg';
+          finalImageData = `data:${mime};base64,${part.inlineData.data.trim()}`;
+          foundImage = true;
+          break;
         }
       }
-    });
+    }
 
-    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+    // Extraction: Fallback to regex if binary part missing
+    if (!foundImage) {
+      const text = finalModelResponse.text();
+      console.log('[DEBUG] AI returned text instead of binary. Length:', text?.length);
+      const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
+      const matches = text.match(b64Regex);
+      if (matches && matches.length > 0) {
+        let cleanM = matches[0];
+        if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
+        cleanM = cleanM.replace(/[\r\n\s]/g, '');
+        const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+        finalImageData = `data:${mime};base64,${cleanM}`;
+        foundImage = true;
+      }
+    }
+
+    if (!foundImage) {
+      console.error('EXTRACTION FAILED. Response:', JSON.stringify(finalModelResponse).slice(0, 200));
+      return NextResponse.json({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }, { status: 500 });
+    }
+
+    // SERVER-SIDE AUTO SAVE
+    try {
+      if (userId) {
+        console.log(`[SERVER-SAVE] Saving for user: ${userId}`);
+        await supabaseAdmin.from('banners').insert([{
+          user_id: userId,
+          image_url: finalImageData,
+          prompt: prompt,
+          size: size,
+          model_id: currentModelId,
+        }]);
+        await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
+      } else if (sessionId) {
+        console.log(`[ANON-SAVE] Saving for session: ${sessionId}`);
+        await supabaseAdmin.from('anonymous_banners').insert([{
+          session_id: sessionId,
+          image_url: finalImageData,
+          prompt: prompt,
+          size: size,
+          model_id: currentModelId,
+        }]);
+      }
+    } catch (saveError) {
+      console.error('[DATABASE-SAVE] Background save error (ignored to not block user):', saveError);
+    }
+
+    return NextResponse.json({ image: finalImageData });
 
   } catch (error) {
     console.error('Erro na geração:', error);
