@@ -495,7 +495,12 @@ export default function AdminDashboard() {
                                         </span>
                                     </div>
                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{item.prompt || '—'}</div>
-                                    {item.caption && <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '2px' }}>✍️ Legenda gerada</div>}
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                        {item.caption && <div style={{ fontSize: '10px', color: 'var(--accent)' }}>✍️ Legenda</div>}
+                                        <div style={{ fontSize: '9px', color: item.model_id?.includes('3-pro') ? '#22c55e' : '#f97316', fontWeight: 700, background: item.model_id?.includes('3-pro') ? 'rgba(34,197,94,0.1)' : 'rgba(249,115,22,0.1)', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                            {item.model_id?.includes('3-pro') ? '💎 3.0 Pro' : '⚡ 2.5 Flash'}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{new Date(item.created_at).toLocaleDateString('pt-BR')}</div>
@@ -546,8 +551,13 @@ export default function AdminDashboard() {
                                                     {new Date(item.created_at).toLocaleDateString('pt-BR')}
                                                 </span>
                                             </div>
-                                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'monospace' }}>
-                                                session: {item.session_id?.slice(0, 10)}...
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                                <div style={{ fontSize: '8px', color: item.model_id?.includes('3-pro') ? '#22c55e' : '#f97316', fontWeight: 800, textTransform: 'uppercase' }}>
+                                                    {item.model_id?.includes('3-pro') ? '3.0 Pro' : '2.5 Flash'}
+                                                </div>
+                                                <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                                    ID: {item.session_id?.slice(0, 8)}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

@@ -154,12 +154,13 @@ BRIEFING DO CLIENTE: "${prompt}"`;
 
     // ── Retry & Fallback Logic for Gemini 503 Errors ──────────────────────
     let result;
-    const maxRetries = 3;
+    const maxRetriesPrimary = 5; // Reinforced priority for 3.0 Pro
+    const maxRetriesFallback = 2; // Short retry for fallback
     let currentModelId = 'gemini-3-pro-image-preview';
 
-    async function attemptGeneration(modelId) {
+    async function attemptGeneration(modelId, maxRetries) {
       const model = genAI.getGenerativeModel({ model: modelId });
-      let retryDelay = 1000;
+      let retryDelay = 1500; // Increased base delay
 
       for (let i = 0; i < maxRetries; i++) {
         try {
@@ -170,7 +171,7 @@ BRIEFING DO CLIENTE: "${prompt}"`;
           if (isTransient && i < maxRetries - 1) {
             console.warn(`[GEMINI] Error 503 on ${modelId}. Retrying in ${retryDelay}ms...`);
             await new Promise(r => setTimeout(r, retryDelay));
-            retryDelay *= 2;
+            retryDelay *= 1.5; // Slightly slower backoff
             continue;
           }
           throw err;
@@ -179,13 +180,13 @@ BRIEFING DO CLIENTE: "${prompt}"`;
     }
 
     try {
-      result = await attemptGeneration(currentModelId);
+      result = await attemptGeneration(currentModelId, maxRetriesPrimary);
     } catch (err) {
       const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
       if (isTransient) {
-        console.error(`[GEMINI] ${currentModelId} failed after ${maxRetries} retries. Falling back to gemini-2.5-flash-image...`);
+        console.error(`[GEMINI] ${currentModelId} failed after ${maxRetriesPrimary} retries. Falling back to gemini-2.5-flash-image...`);
         currentModelId = 'gemini-2.5-flash-image';
-        result = await attemptGeneration(currentModelId);
+        result = await attemptGeneration(currentModelId, maxRetriesFallback);
       } else {
         throw err;
       }
@@ -239,6 +240,7 @@ BRIEFING DO CLIENTE: "${prompt}"`;
               image_url: finalImageData,
               prompt: prompt,
               size: size,
+              model_id: currentModelId,
             }]);
             if (saveError) {
               console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
@@ -259,6 +261,7 @@ BRIEFING DO CLIENTE: "${prompt}"`;
               image_url: finalImageData,
               prompt: prompt,
               size: size,
+              model_id: currentModelId,
             }]);
             if (anonError) console.error('[ANON-SAVE] Failed to save anonymous banner:', anonError);
             else console.log('[ANON-SAVE] Anonymous banner saved.');

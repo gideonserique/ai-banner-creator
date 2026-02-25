@@ -49,7 +49,7 @@ export async function GET(request) {
         // 4. Fetch all banners (excluding admin)
         let bannersQuery = supabaseAdmin
             .from('banners')
-            .select('id, user_id, size, created_at, prompt, image_url, caption')
+            .select('id, user_id, size, created_at, prompt, image_url, caption, model_id')
             .order('created_at', { ascending: false });
         if (adminId) bannersQuery = bannersQuery.neq('user_id', adminId);
         const { data: banners = [], error: bannersError } = await bannersQuery;
@@ -206,6 +206,7 @@ export async function GET(request) {
                 ...b,
                 user_name: profile?.company_name || profile?.full_name || 'Usuário',
                 subscription_tier: profile?.subscription_tier || 'free',
+                model_id: b.model_id || 'gemini-3-pro-image-preview',
             };
         });
 
@@ -214,7 +215,7 @@ export async function GET(request) {
         try {
             const { data: anonData, error: anonError } = await supabaseAdmin
                 .from('anonymous_banners')
-                .select('id, session_id, prompt, size, image_url, created_at')
+                .select('id, session_id, prompt, size, image_url, created_at, model_id')
                 .order('created_at', { ascending: false })
                 .limit(50);
             if (!anonError && anonData) anonymousBanners = anonData;
