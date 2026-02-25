@@ -148,26 +148,32 @@ export async function POST(request) {
 
     // Extraction: Fallback to regex if binary part missing
     if (!foundImage) {
-      const text = finalModelResponse.text();
-      console.log('[DEBUG] AI returned text instead of binary. Length:', text?.length);
-      const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
-      const matches = text.match(b64Regex);
-      if (matches && matches.length > 0) {
-        let cleanM = matches[0];
-        if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
-        cleanM = cleanM.replace(/[\r\n\s]/g, '');
-        const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-        finalImageData = `data:${mime};base64,${cleanM}`;
-        foundImage = true;
+      try {
+        const text = finalModelResponse.text();
+        if (text) {
+          console.log('[DEBUG] AI returned text instead of binary. Length:', text.length);
+          const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
+          const matches = text.match(b64Regex);
+          if (matches && matches.length > 0) {
+            let cleanM = matches[0];
+            if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
+            cleanM = cleanM.replace(/[\r\n\s]/g, '');
+            const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+            finalImageData = `data:${mime};base64,${cleanM}`;
+            foundImage = true;
+          }
+        }
+      } catch (textErr) {
+        console.warn('[GEMINI] Failed to extract text from response (likely blocked or binary-only):', textErr.message);
       }
     }
 
     if (!foundImage) {
-      console.error('EXTRACTION FAILED. Response:', JSON.stringify(finalModelResponse).slice(0, 200));
-      return NextResponse.json({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }, { status: 500 });
+      console.error('EXTRACTION FAILED. Parts:', parts?.length || 0);
+      return NextResponse.json({ error: 'O banner não pôde ser gerado. O modelo não devolveu uma imagem válida.' }, { status: 500 });
     }
 
-    // SERVER-SIDE AUTO SAVE
+    // SERVER-SIDE AUTO SAVE (handled by DB triggers, no more manual RPC)
     try {
       if (userId) {
         console.log(`[SERVER-SAVE] Saving for user: ${userId}`);
@@ -178,7 +184,6 @@ export async function POST(request) {
           size: size,
           model_id: currentModelId,
         }]);
-        await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
       } else if (sessionId) {
         console.log(`[ANON-SAVE] Saving for session: ${sessionId}`);
         await supabaseAdmin.from('anonymous_banners').insert([{
@@ -190,7 +195,7 @@ export async function POST(request) {
         }]);
       }
     } catch (saveError) {
-      console.error('[DATABASE-SAVE] Background save error (ignored to not block user):', saveError);
+      console.error('[DATABASE-SAVE] Background save error:', saveError);
     }
 
     return NextResponse.json({ image: finalImageData });

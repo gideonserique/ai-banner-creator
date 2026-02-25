@@ -261,7 +261,13 @@ export default function HomePage() {
         throw new Error(data.error || 'Falha na geração');
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseErr) {
+        console.error('Failed to parse server response:', parseErr);
+        throw new Error('O servidor demorou muito para responder ou encontrou um problema técnico. Por favor, tente novamente em alguns segundos.');
+      }
 
       if (data.image) {
         const result = { url: data.image, size: generationSize };
@@ -273,6 +279,8 @@ export default function HomePage() {
         if (user) {
           setTimeout(() => fetchProfile(user.id), 2000);
         }
+      } else if (data.error) {
+        throw new Error(data.error);
       } else {
         throw new Error('O modelo não retornou uma imagem válida.');
       }
