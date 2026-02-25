@@ -261,54 +261,20 @@ export default function HomePage() {
         throw new Error(data.error || 'Falha na geração');
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = [];
-      let buffer = '';
+      const data = await response.json();
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      if (data.image) {
+        const result = { url: data.image, size: generationSize };
+        setVariations([result]);
+        setProgress(100);
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.error) throw new Error(parsed.error);
-            if (parsed.image) {
-              accumulated.push({ url: parsed.image, size: generationSize });
-              setVariations([...accumulated]);
-              setProgress(100);
-            }
-          } catch (e) { }
+        // AUTO-SAVE: Se estiver logado, o servidor já salvou o banner via Supabase Admin API.
+        // O cliente apenas atualiza a contagem local (perfil).
+        if (user) {
+          setTimeout(() => fetchProfile(user.id), 2000);
         }
-      }
-
-      if (buffer.trim()) {
-        try {
-          const parsed = JSON.parse(buffer);
-          if (parsed.image) {
-            accumulated.push({ url: parsed.image, size: generationSize });
-            setVariations([...accumulated]);
-          }
-        } catch (e) { }
-      }
-
-      if (accumulated.length === 0) {
-        throw new Error('O modelo não retornou uma imagem válida. Tente descrever sua ideia novamente.');
-      }
-      setProgress(100);
-
-      // AUTO-SAVE: Se estiver logado, o servidor já salvou o banner em segundo plano
-      // via SUPABASE_SERVICE_ROLE_KEY no endpoint /api/generate.
-      // O cliente apenas atualiza a contagem local.
-      if (user && accumulated.length > 0) {
-        // Aguardamos um pouco para o trigger no banco processar
-        setTimeout(() => fetchProfile(user.id), 2000);
+      } else {
+        throw new Error('O modelo não retornou uma imagem válida.');
       }
 
       setTimeout(() => {
