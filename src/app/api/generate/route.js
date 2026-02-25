@@ -125,7 +125,7 @@ BRIEFING DO CLIENTE: "${prompt}"`;
 
     // ── Optimized "Double-Shot" Logic (Sub-3.0 Priority) ──────────────────────
     let result;
-    let currentModelId = 'gemini-2.5-flash-image'; // Primary Optimized Model
+    let currentModelId = 'gemini-3-pro-image-preview'; // Primary Elite Model
 
     async function attemptGeneration(modelId) {
       const model = genAI.getGenerativeModel({ model: modelId });
@@ -139,9 +139,8 @@ BRIEFING DO CLIENTE: "${prompt}"`;
     } catch (err) {
       const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
       if (isTransient) {
-        console.warn(`[GEMINI] ⚠️ ${currentModelId} failed. Switching to 2.0 Flash...`);
-        // SHOT 2: Gemini 2.0 Flash (Fast Backup)
-        currentModelId = 'gemini-2.0-flash';
+        // SHOT 2: Gemini 2.5 Flash Image (Safe Backup)
+        currentModelId = 'gemini-2.5-flash-image';
         try {
           result = await attemptGeneration(currentModelId);
         } catch (err2) {
