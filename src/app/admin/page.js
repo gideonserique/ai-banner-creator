@@ -89,6 +89,16 @@ export default function AdminDashboard() {
     const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
     const [deleting, setDeleting] = useState(false);
     const [deleteMsg, setDeleteMsg] = useState('');
+    const [aiSettings, setAiSettings] = useState({ active_model_id: 'fal-ai/flux/v1.1-pro' });
+    const [savingSettings, setSavingSettings] = useState(false);
+
+    const MODELS = [
+        { id: 'fal-ai/flux/v1.1-pro', label: 'Flux 1.1 Pro', provider: 'Fal.ai', icon: '💎', color: '#a78bfa' },
+        { id: 'fal-ai/recraft-v3', label: 'Recraft v3', provider: 'Fal.ai', icon: '🎨', color: '#22c55e' },
+        { id: 'fal-ai/nano-banana', label: 'Nano Banana Pro', provider: 'Fal.ai', icon: '🍌', color: '#fbbf24' },
+        { id: 'fal-ai/gpt-image', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
+        { id: 'fal-ai/seedream', label: 'Seedream 5 Lite', provider: 'Fal.ai', icon: '🌊', color: '#06b6d4' },
+    ];
 
     useEffect(() => { checkAndFetch(); }, []);
 
@@ -106,10 +116,40 @@ export default function AdminDashboard() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
             setData(json);
+
+            // Fetch AI Settings
+            const setRes = await fetch('/api/admin/settings', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (setRes.ok) {
+                const setJson = await setRes.json();
+                if (setJson.active_model_id) setAiSettings(setJson);
+            }
         } catch (e) {
             setError(e.message);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleSaveAiSetting(modelId) {
+        setSavingSettings(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ key: 'active_model_id', value: modelId }),
+            });
+            if (!res.ok) throw new Error('Falha ao salvar');
+            setAiSettings({ active_model_id: modelId });
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            setSavingSettings(false);
         }
     }
 
@@ -308,6 +348,42 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
+                {/* AI SETTINGS SECTION */}
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '18px', padding: '24px', marginBottom: '24px', marginTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-primary)' }}>🧪 Central de Inteligência (Fal.ai)</div>
+                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Selecione o modelo global de geração de banners para todos os usuários.</p>
+                        </div>
+                        {savingSettings && <span className={styles.spinner} style={{ width: 14, height: 14 }} />}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                        {MODELS.map(m => (
+                            <div
+                                key={m.id}
+                                onClick={() => handleSaveAiSetting(m.id)}
+                                style={{
+                                    padding: '14px',
+                                    borderRadius: '12px',
+                                    border: `2px solid ${aiSettings.active_model_id === m.id ? m.color : 'var(--border)'}`,
+                                    background: aiSettings.active_model_id === m.id ? `${m.color}0a` : 'rgba(255,255,255,0.02)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    position: 'relative',
+                                    opacity: savingSettings ? 0.6 : 1,
+                                }}
+                            >
+                                <div style={{ fontSize: '20px', marginBottom: '6px' }}>{m.icon}</div>
+                                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{m.label}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{m.provider}</div>
+                                {aiSettings.active_model_id === m.id && (
+                                    <div style={{ position: 'absolute', top: '8px', right: '8px', background: m.color, color: '#fff', fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: '10px' }}>ATIVO</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Tab: Traffic */}
                 {activeTab === 'traffic' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -497,8 +573,24 @@ export default function AdminDashboard() {
                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{item.prompt || '—'}</div>
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                                         {item.caption && <div style={{ fontSize: '10px', color: 'var(--accent)' }}>✍️ Legenda</div>}
-                                        <div style={{ fontSize: '9px', color: item.model_id?.includes('flash') ? '#f97316' : '#22c55e', fontWeight: 700, background: item.model_id?.includes('flash') ? 'rgba(249,115,22,0.1)' : 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                                            {item.model_id?.includes('flash') ? '⚡ 2.5 Flash' : '💎 3.0 Pro'}
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                            {item.caption && <div style={{ fontSize: '10px', color: 'var(--accent)' }}>✍️ Legenda</div>}
+                                            {(() => {
+                                                const m = MODELS.find(mod => mod.id === item.model_id);
+                                                return (
+                                                    <div style={{
+                                                        fontSize: '9px',
+                                                        color: m?.color || '#a78bfa',
+                                                        fontWeight: 700,
+                                                        background: `${m?.color || '#a78bfa'}1a`,
+                                                        padding: '1px 6px',
+                                                        borderRadius: '4px',
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {m?.label || item.model_id || 'Gemini 3.0'}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
