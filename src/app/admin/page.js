@@ -8,10 +8,10 @@ import styles from '../page.module.css';
 const ADMIN_EMAIL = 'gideongsr94@gmail.com';
 
 const MODELS = [
-    { id: 'fal-ai/flux-pro/v1.1', label: 'Flux 1.1 Pro', provider: 'Fal.ai', icon: '💎', color: '#a78bfa' },
+    { id: 'fal-ai/flux-pro/v2', label: 'Flux 2 Pro', provider: 'Fal.ai', icon: '💎', color: '#8b5cf6' },
     { id: 'fal-ai/recraft-v3', label: 'Recraft v3', provider: 'Fal.ai', icon: '🎨', color: '#22c55e' },
     { id: 'fal-ai/nano-banana-pro', label: 'Nano Banana Pro', provider: 'Fal.ai', icon: '🍌', color: '#fbbf24' },
-    { id: 'fal-ai/openai/gpt-image-1.5', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
+    { id: 'fal-ai/gpt-image-1.5', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
     { id: 'fal-ai/bytedance/seedream/v5/lite/text-to-image', label: 'Seedream 5 Lite', provider: 'Fal.ai', icon: '🌊', color: '#06b6d4' },
 ];
 
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
     const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
     const [deleting, setDeleting] = useState(false);
     const [deleteMsg, setDeleteMsg] = useState('');
-    const [aiSettings, setAiSettings] = useState({ active_model_id: 'fal-ai/flux-pro/v1.1' });
+    const [aiSettings, setAiSettings] = useState({ active_model_id: 'fal-ai/flux-pro/v2' });
     const [savingSettings, setSavingSettings] = useState(false);
 
     useEffect(() => { checkAndFetch(); }, []);
