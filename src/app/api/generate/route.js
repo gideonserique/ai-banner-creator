@@ -125,17 +125,23 @@ EXEMPLOS DE ADAPTAÇÃO POR SEGMENTO:
 - Imóveis → Foto de impacto, tons sóbrios, sofisticação, detalhes arquitetônicos
 
 ═══════════════════════════════════════════
-ETAPA 2 — EXECUÇÃO DO BANNER
+ETAPA 2 — EXECUÇÃO DO BANNER (REGRAS CRÍTICAS)
 ═══════════════════════════════════════════
+
+DESIGN TELA CHEIA (FULL BLEED):
+- O design DEVE ocupar 100% da área do banner (${dimensions.width}x${dimensions.height}).
+- NUNCA gere o banner com bordas, margens brancas/pretas ou emoldurado dentro de outro fundo.
+- O plano de fundo e os elementos devem chegar até o limite extremo da imagem.
 
 ${productImageInstruction}
 
 ${brandingInstruction}
 
-INFORMAÇÕES DE CONTATO E COMERCIAIS (REGRA CRÍTICA):
-- Inclua NO BANNER APENAS as informações que o usuário especificou no briefing: preços, telefone, WhatsApp, endereço, horários, promoções, etc.
-- NUNCA invente, complete ou adicione informações que o usuário não mencionou (ex: não crie um número de telefone fictício se ele não informou).
-- Organize as informações fornecidas de forma elegante, legível e com hierarquia visual adequada ao segmento.
+INFORMAÇÕES E TEXTOS (FIDELIDADE TOTAL):
+- Inclua NO BANNER APENAS as informações que o usuário especificou no briefing: preços, telefone, promoções, etc.
+- NUNCA adicione frases de erro, avisos técnicos ou metadados como "Image not included", "Foto meramente ilustrativa" ou avisos de direitos autorais, A MENOS QUE o usuário tenha pedido explicitamente.
+- NUNCA invente informações fictícias (telefones falsos, links). Se a informação não está no briefing, não coloque no banner.
+- REVISÃO GRAMATICAL: Use EXCLUSIVAMENTE Português do Brasil. Revise 3 vezes a ortografia e acentuação antes de gerar. Erros de digitação são inaceitáveis.
 
 QUALIDADE TÉCNICA (OBRIGATÓRIO):
 - Composição visual profissional com hierarquia clara de informações
@@ -143,7 +149,6 @@ QUALIDADE TÉCNICA (OBRIGATÓRIO):
 - Cores harmoniosas e impactantes, alinhadas ao segmento detectado
 - Iluminação de produto de nível estúdio fotográfico profissional
 - Arte finalizada, sem elementos amadores ou mal posicionados
-- Use APENAS Português do Brasil impecável em todos os textos do banner
 
 OUTPUT:
 - Gere o banner DIRETAMENTE como imagem (inlineData) em ${dimensions.width}x${dimensions.height}px
