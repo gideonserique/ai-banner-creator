@@ -7,6 +7,14 @@ import styles from '../page.module.css';
 
 const ADMIN_EMAIL = 'gideongsr94@gmail.com';
 
+const MODELS = [
+    { id: 'fal-ai/flux-pro/v1.1', label: 'Flux 1.1 Pro', provider: 'Fal.ai', icon: '💎', color: '#a78bfa' },
+    { id: 'fal-ai/recraft-v3', label: 'Recraft v3', provider: 'Fal.ai', icon: '🎨', color: '#22c55e' },
+    { id: 'fal-ai/nano-banana-pro', label: 'Nano Banana Pro', provider: 'Fal.ai', icon: '🍌', color: '#fbbf24' },
+    { id: 'fal-ai/openai/gpt-image-1.5', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
+    { id: 'fal-ai/bytedance/seedream/v5/lite/text-to-image', label: 'Seedream 5 Lite', provider: 'Fal.ai', icon: '🌊', color: '#06b6d4' },
+];
+
 function MiniBar({ value, max, color = '#f97316' }) {
     const pct = max > 0 ? (value / max) * 100 : 0;
     return (
@@ -89,16 +97,8 @@ export default function AdminDashboard() {
     const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
     const [deleting, setDeleting] = useState(false);
     const [deleteMsg, setDeleteMsg] = useState('');
-    const [aiSettings, setAiSettings] = useState({ active_model_id: 'fal-ai/flux/v1.1-pro' });
+    const [aiSettings, setAiSettings] = useState({ active_model_id: 'fal-ai/flux-pro/v1.1' });
     const [savingSettings, setSavingSettings] = useState(false);
-
-    const MODELS = [
-        { id: 'fal-ai/flux-pro/v1.1', label: 'Flux 1.1 Pro', provider: 'Fal.ai', icon: '💎', color: '#a78bfa' },
-        { id: 'fal-ai/recraft-v3', label: 'Recraft v3', provider: 'Fal.ai', icon: '🎨', color: '#22c55e' },
-        { id: 'fal-ai/nano-banana-pro', label: 'Nano Banana Pro', provider: 'Fal.ai', icon: '🍌', color: '#fbbf24' },
-        { id: 'fal-ai/openai/gpt-image-1.5', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
-        { id: 'fal-ai/bytedance/seedream/v5/lite/text-to-image', label: 'Seedream 5 Lite', provider: 'Fal.ai', icon: '🌊', color: '#06b6d4' },
-    ];
 
     useEffect(() => { checkAndFetch(); }, []);
 
@@ -573,25 +573,22 @@ export default function AdminDashboard() {
                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{item.prompt || '—'}</div>
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                                         {item.caption && <div style={{ fontSize: '10px', color: 'var(--accent)' }}>✍️ Legenda</div>}
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                            {item.caption && <div style={{ fontSize: '10px', color: 'var(--accent)' }}>✍️ Legenda</div>}
-                                            {(() => {
-                                                const m = MODELS.find(mod => mod.id === item.model_id);
-                                                return (
-                                                    <div style={{
-                                                        fontSize: '9px',
-                                                        color: m?.color || '#a78bfa',
-                                                        fontWeight: 700,
-                                                        background: `${m?.color || '#a78bfa'}1a`,
-                                                        padding: '1px 6px',
-                                                        borderRadius: '4px',
-                                                        textTransform: 'uppercase'
-                                                    }}>
-                                                        {m?.label || item.model_id || 'Gemini 3.0'}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
+                                        {(() => {
+                                            const m = MODELS.find(mod => mod.id === item.model_id);
+                                            return (
+                                                <div style={{
+                                                    fontSize: '9px',
+                                                    color: m?.color || '#a78bfa',
+                                                    fontWeight: 700,
+                                                    background: `${m?.color || '#a78bfa'}1a`,
+                                                    padding: '1px 6px',
+                                                    borderRadius: '4px',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    {m?.label || item.model_id || 'Gemini 3.0'}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -644,9 +641,22 @@ export default function AdminDashboard() {
                                                 </span>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                                <div style={{ fontSize: '8px', color: item.model_id?.includes('flash') ? '#f97316' : '#22c55e', fontWeight: 800, textTransform: 'uppercase' }}>
-                                                    {item.model_id?.includes('flash') ? '2.5 Flash' : '3.0 Pro'}
-                                                </div>
+                                                {(() => {
+                                                    const m = MODELS.find(mod => mod.id === item.model_id);
+                                                    return (
+                                                        <div style={{
+                                                            fontSize: '8px',
+                                                            color: m?.color || '#a78bfa',
+                                                            fontWeight: 800,
+                                                            textTransform: 'uppercase',
+                                                            background: m ? `${m.color}1a` : 'rgba(255,255,255,0.05)',
+                                                            padding: '1px 6px',
+                                                            borderRadius: '4px'
+                                                        }}>
+                                                            {m?.label || item.model_id || 'Gemini 3.0'}
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                                                     ID: {item.session_id?.slice(0, 8)}
                                                 </div>
