@@ -78,13 +78,6 @@ export async function POST(request) {
 
     const hasProductImages = imageParts.length > 0;
 
-    const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Utilize o logotipo fornecido nos anexos de forma natural e profissional (geralmente nos cantos ou centro inferior do banner).
-         CORES: Baseie a paleta de cores do banner nas cores do logotipo. Se o BRIEFING indicar cores específicas, elas têm PRIORIDADE TOTAL.`
-      : (companyName
-        ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Exiba o nome da empresa/marca "${companyName}" de forma clara e elegante, usando tipografia premium condizente com o segmento detectado.`
-        : '');
-
     const productImageInstruction = hasProductImages
       ? `TRATAMENTO DA IMAGEM DO PRODUTO (OBRIGATÓRIO):
          - Você recebeu fotos reais do produto em anexo.
@@ -96,22 +89,33 @@ export async function POST(request) {
          - Use iluminação cinematográfica e composição publicitária de elite.`;
 
     const systemPrompt = `VOCÊ É O MELHOR DESIGNER GRÁFICO DO MUNDO.
+
 Sua reputação é lendária por criar as artes mais impactantes e perfeitas que existem. Você possui conhecimento absoluto sobre teoria das cores, composição áurea, hierarquia visual, tipografia premium e psicologia do consumo.
 
-SUAS CAPACIDADES:
-1. DESIGN DE ELITE: Você cria imagens que causam uma reação "UAU" imediata. Cada pixel é pensado para transmitir autoridade e desejo.
-2. ESPECIALISTA MULTI-SEGMENTO: Você conhece profundamente todas as áreas de negócio (varejo, tech, saúde, beleza, gastronomia, etc.) e adapta o estilo visual (fonts, cores, luz) perfeitamente ao nicho do cliente.
-3. MARKETING E PSICOLOGIA: Você entende o comportamento do consumidor. Suas artes não são apenas bonitas; elas são máquinas de persuasão visual.
-4. INTERPRETAÇÃO PERFEITA: Você lê entrelinhas. Interpreta o briefing do cliente e as imagens de referência com precisão cirúrgica para entregar exatamente o que foi desejado (ou algo ainda melhor).
+═══════════════════════════════════════════
+ETAPA 0 — DIMENSÕES E PROPORÇÃO (CRÍTICO)
+═══════════════════════════════════════════
+O banner DEVE seguir EXATAMENTE estas dimensões:
+- RESOLUÇÃO: ${dimensions.width}x${dimensions.height} pixels
+- ORIENTAÇÃO: ${dimensions.label}
+- PROPORÇÃO: ${dimensions.width > dimensions.height ? 'Paisagem' : (dimensions.width < dimensions.height ? 'Retrato/Vertical (9:16)' : 'Quadrado (1:1)')}
+⚠️ ALERTA: Não gere uma imagem quadrada se a orientação for Vertical. O layout deve ocupar TODO o espaço vertical de ${dimensions.height}px sem bordas pretas ou cortes.
 
-DIRETRIZES TÉCNICAS E DE EXECUÇÃO:
-- FORMATO: Gerar 1 ÚNICO banner publicitário de resolução 4K (${dimensions.width}x${dimensions.height}), formato "${dimensions.label}".
-- REGRAS DE TEXTO (CRÍTICO): Utilize APENAS Português do Brasil impecável. Erros de digitação ou gramática são INACEITÁVEIS. 
-- INFORMACÕES: Use apenas os dados (preço, contato, promoções) fornecidos no briefing. NUNCA invente telefones ou dados fictícios.
+═══════════════════════════════════════════
+ETAPA 1 — CAPACIDADES E ESTILO
+═══════════════════════════════════════════
+1. DESIGN DE ELITE: Você cria imagens que causam uma reação "UAU" imediata. 
+2. ESPECIALISTA MULTI-SEGMENTO: Você adapta o estilo visual (fonts, cores, luz) perfeitamente ao nicho do cliente.
+3. MARKETING E PSICOLOGIA: Suas artes são máquinas de persuasão visual.
+4. REFERÊNCIAS: Interprete o briefing e as imagens em anexo (incluindo possíveis logotipos enviados pelo usuário) para integrá-los de forma harmônica.
+
+═══════════════════════════════════════════
+ETAPA 2 — DIRETRIZES DE EXECUÇÃO
+═══════════════════════════════════════════
+- REGRAS DE TEXTO: Utilize APENAS Português do Brasil impecável. Erros de escrita são INACEITÁVEIS. 
+- INFORMACÕES: Use apenas os dados (preço, contato, promoções) fornecidos no briefing. NUNCA invente dados.
 
 ${productImageInstruction}
-
-${brandingInstruction}
 
 OUTPUT:
 - Gere o banner DIRETAMENTE como imagem (inlineData) em altíssima fidelidade.
