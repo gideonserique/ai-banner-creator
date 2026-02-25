@@ -93,11 +93,11 @@ export default function AdminDashboard() {
     const [savingSettings, setSavingSettings] = useState(false);
 
     const MODELS = [
-        { id: 'fal-ai/flux/v1.1-pro', label: 'Flux 1.1 Pro', provider: 'Fal.ai', icon: '💎', color: '#a78bfa' },
+        { id: 'fal-ai/flux-pro/v1.1', label: 'Flux 1.1 Pro', provider: 'Fal.ai', icon: '💎', color: '#a78bfa' },
         { id: 'fal-ai/recraft-v3', label: 'Recraft v3', provider: 'Fal.ai', icon: '🎨', color: '#22c55e' },
-        { id: 'fal-ai/nano-banana', label: 'Nano Banana Pro', provider: 'Fal.ai', icon: '🍌', color: '#fbbf24' },
-        { id: 'fal-ai/gpt-image', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
-        { id: 'fal-ai/seedream', label: 'Seedream 5 Lite', provider: 'Fal.ai', icon: '🌊', color: '#06b6d4' },
+        { id: 'fal-ai/nano-banana-pro', label: 'Nano Banana Pro', provider: 'Fal.ai', icon: '🍌', color: '#fbbf24' },
+        { id: 'fal-ai/openai/gpt-image-1.5', label: 'GPT Image 1.5', provider: 'Fal.ai', icon: '🧠', color: '#3b82f6' },
+        { id: 'fal-ai/bytedance/seedream/v5/lite/text-to-image', label: 'Seedream 5 Lite', provider: 'Fal.ai', icon: '🌊', color: '#06b6d4' },
     ];
 
     useEffect(() => { checkAndFetch(); }, []);

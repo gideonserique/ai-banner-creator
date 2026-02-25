@@ -32,7 +32,7 @@ export async function POST(request) {
       .eq('key', 'active_model_id')
       .single();
 
-    const activeModelId = modelSetting?.value || "fal-ai/flux/v1.1-pro";
+    const activeModelId = modelSetting?.value || "fal-ai/flux-pro/v1.1";
 
     // ── 2. Generation Limit Check ────────────────────────────────────────
     if (userId) {
