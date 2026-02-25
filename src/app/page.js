@@ -239,42 +239,60 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        // Handle server-side enforced limit (catches starter plan hitting 20, etc.)
-        if (data.error === 'LIMIT_REACHED') {
+        let errorData;
+        try {
+          const text = await response.text();
+          try {
+            errorData = JSON.parse(text);
+          } catch (e) {
+            errorData = { error: 'UNEXPECTED_RESPONSE', message: text || 'Resposta inválida do servidor.' };
+          }
+        } catch (e) {
+          errorData = { error: 'NETWORK_ERROR', message: 'Falha ao ler a resposta do servidor.' };
+        }
+
+        if (errorData.error === 'LIMIT_REACHED') {
           setShowLimitModal(true);
           setLoading(false);
           setProgress(0);
           return;
         }
-        throw new Error(data.error || 'Falha na geração');
+        throw new Error(errorData.message || errorData.error || 'Falha na geração');
       }
 
+      // ── Process Stream ──────────────────────
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let accumulated = [];
       let buffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.error) throw new Error(parsed.error);
-            if (parsed.image) {
-              accumulated.push({ url: parsed.image, size: generationSize });
-              setVariations([...accumulated]);
-              setProgress(100);
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.error) throw new Error(parsed.error);
+              if (parsed.image) {
+                accumulated.push({ url: parsed.image, size: generationSize });
+                setVariations([...accumulated]);
+                setProgress(100);
+              }
+            } catch (e) {
+              console.warn('[Stream] Line parse error:', e);
             }
-          } catch (e) { }
+          }
         }
+      } catch (streamErr) {
+        console.error('[Stream] Reader error:', streamErr);
+        throw streamErr;
       }
 
       if (buffer.trim()) {

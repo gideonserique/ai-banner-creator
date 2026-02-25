@@ -59,8 +59,6 @@ export async function POST(request) {
             }, { status: 429 });
           }
         }
-      } else {
-        console.log(`[ADMIN] User ${userId} (${authUser?.email}) bypassing limits.`);
       }
     }
 
@@ -82,73 +80,8 @@ export async function POST(request) {
 
     const hasProductImages = imageParts.length > 0;
 
-    const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Utilize o logotipo fornecido nos anexos de forma natural e profissional (geralmente nos cantos ou centro inferior do banner).
-         CORES: Baseie a paleta de cores do banner nas cores do logotipo. Se o BRIEFING indicar cores específicas, elas têm PRIORIDADE TOTAL.`
-      : (companyName
-        ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Exiba o nome da empresa/marca "${companyName}" de forma clara e elegante, usando tipografia premium condizente com o segmento detectado.`
-        : '');
-
-    const productImageInstruction = hasProductImages
-      ? `TRATAMENTO DA IMAGEM DO PRODUTO (OBRIGATÓRIO):
-         - Você receberá uma ou mais fotos reais do produto nos anexos.
-         - APRIMORE a qualidade da foto: corrija iluminação, contraste, nitidez e cores para nível de estúdio profissional.
-         - REMOVA ou substitua o fundo original por um fundo limpo, gradiente ou ambientado — compatível com o estilo do banner.
-         - MANTENHA FIELMENTE todas as características do produto original: forma, cor, textura, detalhes — o produto deve ser claramente reconhecível como o mesmo da foto enviada.
-         - Integre o produto de forma harmoniosa e impactante ao layout do banner.`
-      : `GERAÇÃO DO PRODUTO (OBRIGATÓRIO):
-         - O usuário NÃO enviou foto. Gere uma imagem fotorrealista, de alta qualidade e profissional do produto ou serviço descrito no briefing.
-         - Use iluminação de estúdio, ângulo favorável e render de muito alta qualidade, como se fosse uma foto profissional tirada para publicidade.`;
-
     const systemPrompt = `Você é um Designer Especialista em Banners para Redes Sociais de Classe Mundial.
-Você domina criação de materiais publicitários de alta performance para QUALQUER tipo de negócio: varejo, tecnologia, moda, beleza, alimentação, serviços, saúde, educação, imóveis, automotivo, e muito mais.
-
 Sua tarefa é gerar 1 ÚNICO banner publicitário profissional de resolução 4K (${dimensions.width}x${dimensions.height}), formato "${dimensions.label}".
-
-═══════════════════════════════════════════
-ETAPA 1 — ANÁLISE INTELIGENTE DO SEGMENTO
-═══════════════════════════════════════════
-Antes de criar, analise CUIDADOSAMENTE:
-• O BRIEFING do usuário (texto, produto, serviço descrito)  
-• As IMAGENS enviadas (se houver) — identifique o produto, categoria e contexto visual
-
-Com essa análise, determine o SEGMENTO (ex: eletrônico, restaurante, salão de beleza, academia, clínica, imobiliária, loja de roupas, etc.) e adapte COMPLETAMENTE o design:
-
-EXEMPLOS DE ADAPTAÇÃO POR SEGMENTO:
-- Eletrônico/Tecnologia → Design clean, cores frias (azul/preto/branco), tipografia tech, render 3D, fundo escuro ou gradiente futurista
-- Alimentação/Delivery → Cores quentes e apetitosas, iluminação "suculenta", close do produto, fundo rústico ou moderno
-- Moda/Vestuário → Estilo editorial, paleta sofisticada, lifestyle, fontes elegantes
-- Beleza/Estética → Tom rosê/dourado/nude, elegância, texturas suaves, luz suave difusa
-- Academia/Fitness → Energia, cores vibrantes, tipografia bold, contraste alto
-- Saúde/Clínica → Profissionalism, azul/verde, clean, transmits confiança
-- Serviços/Prestador → Foco no benefício, tipografia clara, call-to-action forte
-- Imóveis → Foto de impacto, tons sóbrios, sofisticação, detalhes arquitetônicos
-
-═══════════════════════════════════════════
-ETAPA 2 — EXECUÇÃO DO BANNER
-═══════════════════════════════════════════
-
-${productImageInstruction}
-
-${brandingInstruction}
-
-INFORMAÇÕES DE CONTATO E COMERCIAIS (REGRA CRÍTICA):
-- Inclua NO BANNER APENAS as informações que o usuário especificou no briefing: preços, telefone, WhatsApp, endereço, horários, promoções, etc.
-- NUNCA invente, complete ou adicione informações que o usuário não mencionou (ex: não crie um número de telefone fictício se ele não informou).
-- Organize as informações fornecidas de forma elegante, legível e com hierarquia visual adequada ao segmento.
-
-QUALIDADE TÉCNICA (OBRIGATÓRIO):
-- Composição visual profissional com hierarquia clara de informações
-- Tipografia premium e legível, adequada ao segmento
-- Cores harmoniosas e impactantes, alinhadas ao segmento detectado
-- Iluminação de produto de nível estúdio fotográfico profissional
-- Arte finalizada, sem elementos amadores ou mal posicionados
-- Use APENAS Português do Brasil impecável em todos os textos do banner
-
-OUTPUT:
-- Gere o banner DIRETAMENTE como imagem (inlineData) em ${dimensions.width}x${dimensions.height}px
-- NÃO escreva texto explicativo. Retorne SOMENTE a imagem.
-- Se o modo inlineData falhar, retorne APENAS o Base64 puro da imagem.
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
@@ -206,65 +139,30 @@ BRIEFING DO CLIENTE: "${prompt}"`;
             }
           }
 
-          if (!foundImage && fullText) {
-            console.log('[DEBUG] Full response text length:', fullText.length);
-            const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
-            const matches = fullText.match(b64Regex);
-            if (matches && matches.length > 0) {
-              let cleanM = matches[0];
-              if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
-              cleanM = cleanM.replace(/[\r\n\s]/g, '');
-              const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-              const data = `data:${mime};base64,${cleanM}`;
-              finalImageData = data;
-              controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
-              foundImage = true;
-            }
-          }
-
-          // SERVER-SIDE AUTO SAVE — logged user
           if (foundImage && userId) {
-            console.log(`[SERVER-SAVE] Saving banner for user: ${userId}`);
-            const { error: saveError } = await supabaseAdmin.from('banners').insert([{
+            await supabaseAdmin.from('banners').insert([{
               user_id: userId,
               image_url: finalImageData,
               prompt: prompt,
               size: size,
               model_id: currentModelId,
             }]);
-            if (saveError) {
-              console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
-            } else {
-              console.log('[SERVER-SAVE] Banner successfully saved.');
-              // Increment generation counter (only matters for limited plans, harmless for unlimited)
-              const { error: countError } = await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
-              if (countError) console.error('[SERVER-SAVE] Failed to increment count:', countError);
-              else console.log('[SERVER-SAVE] Generation count incremented.');
-            }
-          }
-
-          // SERVER-SIDE AUTO SAVE — anonymous user
-          if (foundImage && !userId && sessionId) {
-            console.log(`[ANON-SAVE] Saving anonymous banner for session: ${sessionId}`);
-            const { error: anonError } = await supabaseAdmin.from('anonymous_banners').insert([{
+            await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
+          } else if (foundImage && sessionId) {
+            await supabaseAdmin.from('anonymous_banners').insert([{
               session_id: sessionId,
               image_url: finalImageData,
               prompt: prompt,
               size: size,
               model_id: currentModelId,
             }]);
-            if (anonError) console.error('[ANON-SAVE] Failed to save anonymous banner:', anonError);
-            else console.log('[ANON-SAVE] Anonymous banner saved.');
           }
 
           if (!foundImage) {
-            console.error('EXTRACTION FAILED. AI Response Text Length:', fullText.length);
-            controller.enqueue(new TextEncoder().encode(JSON.stringify({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }) + '\n'));
+            controller.enqueue(new TextEncoder().encode(JSON.stringify({ error: 'O banner não pôde ser gerado.' }) + '\n'));
           }
-
           controller.close();
         } catch (e) {
-          console.error('Stream error:', e);
           controller.error(e);
         }
       }
@@ -274,10 +172,14 @@ BRIEFING DO CLIENTE: "${prompt}"`;
 
   } catch (error) {
     console.error('Erro na geração:', error);
-    const isTransient = error.message?.includes('503') || error.status === 503 || error.message?.includes('high demand');
+    const isTransient = error.message === 'GEN_FAILED_ALL_MODELS' || error.message?.includes('503') || error.status === 503 || error.message?.includes('high demand');
     const userMessage = isTransient
-      ? 'O sistema está com alta demanda no momento. Por favor, aguarde alguns segundos e tente novamente.'
+      ? 'O sistema está com alta demanda no momento.'
       : `Erro: ${error.message}.`;
-    return NextResponse.json({ error: userMessage }, { status: isTransient ? 503 : 500 });
+
+    return NextResponse.json({
+      error: isTransient ? 'GEN_FAILED_ALL_MODELS' : 'INTERNAL_ERROR',
+      message: userMessage
+    }, { status: isTransient ? 503 : 500 });
   }
 }
