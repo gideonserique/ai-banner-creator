@@ -100,105 +100,187 @@ export async function POST(request) {
          - O usuário NÃO enviou foto. Gere uma imagem fotorrealista, de alta qualidade e profissional do produto ou serviço descrito no briefing.
          - Use iluminação de estúdio, ângulo favorável e render de muito alta qualidade, como se fosse uma foto profissional tirada para publicidade.`;
 
-    const systemPrompt = `Design a professional ${dimensions.label} social media banner (${dimensions.width}x${dimensions.height}).
-    
-    CRITICAL RULES:
-    1. FULL BLEED: The design MUST fill the entire canvas. No borders or margins.
-    2. CONTENT: Use ONLY the following information: "${prompt}". Do not invent details.
-    3. LANGUAGE: All text must be in perfect Brazilian Portuguese.
-    4. NO PLACEHOLDERS: Do not include phrases like "image not included" or technical metadata.
-    5. QUALITY: Professional studio lighting, premium typography, and harmonious colors.
-    
-    ${productImageInstruction}
-    ${brandingInstruction}
-    
-    OUTPUT: Return the banner as a single, high-quality image.`;
+    const systemPrompt = `Você é um Designer Especialista em Banners para Redes Sociais de Classe Mundial.
+Você domina criação de materiais publicitários de alta performance para QUALQUER tipo de negócio: varejo, tecnologia, moda, beleza, alimentação, serviços, saúde, educação, imóveis, automotivo, e muito mais.
 
-    // ── Simplified Logic: GEMINI 3.0 PRO ONLY (Single Attempt, Non-Streaming)
-    let finalModelResponse;
-    const currentModelId = 'gemini-3-pro-image-preview';
+Sua tarefa é gerar 1 ÚNICO banner publicitário profissional de resolução 4K (${dimensions.width}x${dimensions.height}), formato "${dimensions.label}".
 
-    try {
-      const model = genAI.getGenerativeModel({ model: currentModelId });
-      console.log(`[GEMINI] Generating banner with ${currentModelId}...`);
+═══════════════════════════════════════════
+ETAPA 1 — ANÁLISE INTELIGENTE DO SEGMENTO
+═══════════════════════════════════════════
+Antes de criar, analise CUIDADOSAMENTE:
+• O BRIEFING do usuário (texto, produto, serviço descrito)  
+• As IMAGENS enviadas (se houver) — identifique o produto, categoria e contexto visual
 
-      const result = await model.generateContent([systemPrompt, ...brandImages, ...imageParts]);
-      finalModelResponse = await result.response;
-      console.log('[GEMINI] Response received.');
-    } catch (err) {
-      console.error(`[GEMINI] ${currentModelId} failed.`, err);
-      throw err;
-    }
+Com essa análise, determine o SEGMENTO (ex: eletrônico, restaurante, salão de beleza, academia, clínica, imobiliária, loja de roupas, etc.) e adapte COMPLETAMENTE o design:
 
-    let finalImageData = null;
-    let foundImage = false;
+EXEMPLOS DE ADAPTAÇÃO POR SEGMENTO:
+- Eletrônico/Tecnologia → Design clean, cores frias (azul/preto/branco), tipografia tech, render 3D, fundo escuro ou gradiente futurista
+- Alimentação/Delivery → Cores quentes e apetitosas, iluminação "suculenta", close do produto, fundo rústico ou moderno
+- Moda/Vestuário → Estilo editorial, paleta sofisticada, lifestyle, fontes elegantes
+- Beleza/Estética → Tom rosê/dourado/nude, elegância, texturas suaves, luz suave difusa
+- Academia/Fitness → Energia, cores vibrantes, tipografia bold, contraste alto
+- Saúde/Clínica → Profissionalism, azul/verde, clean, transmits confiança
+- Serviços/Prestador → Foco no benefício, tipografia clara, call-to-action forte
+- Imóveis → Foto de impacto, tons sóbrios, sofisticação, detalhes arquitetônicos
 
-    // Extraction: Check inlineData first
-    const parts = finalModelResponse.candidates?.[0]?.content?.parts;
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          const mime = part.inlineData.mimeType || 'image/jpeg';
-          finalImageData = `data:${mime};base64,${part.inlineData.data.trim()}`;
-          foundImage = true;
-          break;
-        }
-      }
-    }
+═══════════════════════════════════════════
+ETAPA 2 — EXECUÇÃO DO BANNER
+═══════════════════════════════════════════
 
-    // Extraction: Fallback to regex if binary part missing
-    if (!foundImage) {
-      try {
-        const text = finalModelResponse.text();
-        if (text) {
-          console.log('[DEBUG] AI returned text instead of binary. Length:', text.length);
-          const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
-          const matches = text.match(b64Regex);
-          if (matches && matches.length > 0) {
-            let cleanM = matches[0];
-            if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
-            cleanM = cleanM.replace(/[\r\n\s]/g, '');
-            const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-            finalImageData = `data:${mime};base64,${cleanM}`;
-            foundImage = true;
+${productImageInstruction}
+
+${brandingInstruction}
+
+INFORMAÇÕES DE CONTATO E COMERCIAIS (REGRA CRÍTICA):
+- Inclua NO BANNER APENAS as informações que o usuário especificou no briefing: preços, telefone, WhatsApp, endereço, horários, promoções, etc.
+- NUNCA invente, complete ou adicione informações que o usuário não mencionou (ex: não crie um número de telefone fictício se ele não informou).
+- Organize as informações fornecidas de forma elegante, legível e com hierarquia visual adequada ao segmento.
+
+QUALIDADE TÉCNICA (OBRIGATÓRIO):
+- Composição visual profissional com hierarquia clara de informações
+- Tipografia premium e legível, adequada ao segmento
+- Cores harmoniosas e impactantes, alinhadas ao segmento detectado
+- Iluminação de produto de nível estúdio fotográfico profissional
+- Arte finalizada, sem elementos amadores ou mal posicionados
+- Use APENAS Português do Brasil impecável em todos os textos do banner
+
+OUTPUT:
+- Gere o banner DIRETAMENTE como imagem (inlineData) em ${dimensions.width}x${dimensions.height}px
+- NÃO escreva texto explicativo. Retorne SOMENTE a imagem.
+- Se o modo inlineData falhar, retorne APENAS o Base64 puro da imagem.
+
+BRIEFING DO CLIENTE: "${prompt}"`;
+
+    // ── Retry & Fallback Logic for Gemini 503 Errors ──────────────────────
+    let result;
+    const maxRetriesPrimary = 5; // Reinforced priority for 3.0 Pro
+    const maxRetriesFallback = 2; // Short retry for fallback
+    let currentModelId = 'gemini-3-pro-image-preview';
+
+    async function attemptGeneration(modelId, maxRetries) {
+      const model = genAI.getGenerativeModel({ model: modelId });
+      let retryDelay = 1500; // Increased base delay
+
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          console.log(`[GEMINI] Attempting generation with ${modelId} (Try ${i + 1}/${maxRetries})...`);
+          return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
+        } catch (err) {
+          const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
+          if (isTransient && i < maxRetries - 1) {
+            console.warn(`[GEMINI] Error 503 on ${modelId}. Retrying in ${retryDelay}ms...`);
+            await new Promise(r => setTimeout(r, retryDelay));
+            retryDelay *= 1.5; // Slightly slower backoff
+            continue;
           }
+          throw err;
         }
-      } catch (textErr) {
-        console.warn('[GEMINI] Failed to extract text from response (likely blocked or binary-only):', textErr.message);
       }
     }
 
-    if (!foundImage) {
-      console.error('EXTRACTION FAILED. Parts:', parts?.length || 0);
-      return NextResponse.json({ error: 'O banner não pôde ser gerado. O modelo não devolveu uma imagem válida.' }, { status: 500 });
-    }
-
-    // SERVER-SIDE AUTO SAVE (handled by DB triggers, no more manual RPC)
     try {
-      if (userId) {
-        console.log(`[SERVER-SAVE] Saving for user: ${userId}`);
-        await supabaseAdmin.from('banners').insert([{
-          user_id: userId,
-          image_url: finalImageData,
-          prompt: prompt,
-          size: size,
-          model_id: currentModelId,
-        }]);
-      } else if (sessionId) {
-        console.log(`[ANON-SAVE] Saving for session: ${sessionId}`);
-        await supabaseAdmin.from('anonymous_banners').insert([{
-          session_id: sessionId,
-          image_url: finalImageData,
-          prompt: prompt,
-          size: size,
-          model_id: currentModelId,
-        }]);
+      result = await attemptGeneration(currentModelId, maxRetriesPrimary);
+    } catch (err) {
+      const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
+      if (isTransient) {
+        console.error(`[GEMINI] ${currentModelId} failed after ${maxRetriesPrimary} retries. Falling back to gemini-2.5-flash-image...`);
+        currentModelId = 'gemini-2.5-flash-image';
+        result = await attemptGeneration(currentModelId, maxRetriesFallback);
+      } else {
+        throw err;
       }
-    } catch (saveError) {
-      console.error('[DATABASE-SAVE] Background save error:', saveError);
     }
 
-    return NextResponse.json({ image: finalImageData });
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullText = '';
+        let foundImage = false;
+        let finalImageData = null;
+
+        try {
+          for await (const chunk of result.stream) {
+            const parts = chunk.candidates?.[0]?.content?.parts;
+            if (parts) {
+              for (const part of parts) {
+                if (part.inlineData?.data) {
+                  const mime = part.inlineData.mimeType || 'image/jpeg';
+                  const data = `data:${mime};base64,${part.inlineData.data.trim()}`;
+                  finalImageData = data;
+                  controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
+                  foundImage = true;
+                } else if (part.text) {
+                  fullText += part.text;
+                }
+              }
+            }
+          }
+
+          if (!foundImage && fullText) {
+            console.log('[DEBUG] Full response text length:', fullText.length);
+            const b64Regex = /(?:data:image\/(?:jpeg|png|webp);base64,)?(?:[A-Za-z0-9+/]{4}){1000,}/g;
+            const matches = fullText.match(b64Regex);
+            if (matches && matches.length > 0) {
+              let cleanM = matches[0];
+              if (cleanM.includes('base64,')) cleanM = cleanM.split('base64,')[1];
+              cleanM = cleanM.replace(/[\r\n\s]/g, '');
+              const mime = cleanM.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+              const data = `data:${mime};base64,${cleanM}`;
+              finalImageData = data;
+              controller.enqueue(new TextEncoder().encode(JSON.stringify({ image: data }) + '\n'));
+              foundImage = true;
+            }
+          }
+
+          // SERVER-SIDE AUTO SAVE — logged user
+          if (foundImage && userId) {
+            console.log(`[SERVER-SAVE] Saving banner for user: ${userId}`);
+            const { error: saveError } = await supabaseAdmin.from('banners').insert([{
+              user_id: userId,
+              image_url: finalImageData,
+              prompt: prompt,
+              size: size,
+              model_id: currentModelId,
+            }]);
+            if (saveError) {
+              console.error('[SERVER-SAVE] Failed to auto-save:', saveError);
+            } else {
+              console.log('[SERVER-SAVE] Banner successfully saved.');
+              // Increment generation counter (only matters for limited plans, harmless for unlimited)
+              const { error: countError } = await supabaseAdmin.rpc('increment_generations_count', { user_id_input: userId });
+              if (countError) console.error('[SERVER-SAVE] Failed to increment count:', countError);
+              else console.log('[SERVER-SAVE] Generation count incremented.');
+            }
+          }
+
+          // SERVER-SIDE AUTO SAVE — anonymous user
+          if (foundImage && !userId && sessionId) {
+            console.log(`[ANON-SAVE] Saving anonymous banner for session: ${sessionId}`);
+            const { error: anonError } = await supabaseAdmin.from('anonymous_banners').insert([{
+              session_id: sessionId,
+              image_url: finalImageData,
+              prompt: prompt,
+              size: size,
+              model_id: currentModelId,
+            }]);
+            if (anonError) console.error('[ANON-SAVE] Failed to save anonymous banner:', anonError);
+            else console.log('[ANON-SAVE] Anonymous banner saved.');
+          }
+
+          if (!foundImage) {
+            console.error('EXTRACTION FAILED. AI Response Text Length:', fullText.length);
+            controller.enqueue(new TextEncoder().encode(JSON.stringify({ error: 'O banner não pôde ser gerado ou o formato retornado é inválido.' }) + '\n'));
+          }
+
+          controller.close();
+        } catch (e) {
+          console.error('Stream error:', e);
+          controller.error(e);
+        }
+      }
+    });
+
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
 
   } catch (error) {
     console.error('Erro na geração:', error);

@@ -151,19 +151,6 @@ export default function HomePage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Restore UX warning: prevent accidental page leave during generation
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (loading) {
-        e.preventDefault();
-        e.returnValue = 'Sua arte ainda está sendo gerada! Se você sair agora, poderá perder o progresso.';
-        return e.returnValue;
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [loading]);
-
   const fetchProfile = async (userId) => {
     try {
       const { data, error } = await supabase
@@ -261,28 +248,54 @@ export default function HomePage() {
         throw new Error(data.error || 'Falha na geração');
       }
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseErr) {
-        console.error('Failed to parse server response:', parseErr);
-        throw new Error('O servidor demorou muito para responder ou encontrou um problema técnico. Por favor, tente novamente em alguns segundos.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = [];
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.error) throw new Error(parsed.error);
+            if (parsed.image) {
+              accumulated.push({ url: parsed.image, size: generationSize });
+              setVariations([...accumulated]);
+              setProgress(100);
+            }
+          } catch (e) { }
+        }
       }
 
-      if (data.image) {
-        const result = { url: data.image, size: generationSize };
-        setVariations([result]);
-        setProgress(100);
+      if (buffer.trim()) {
+        try {
+          const parsed = JSON.parse(buffer);
+          if (parsed.image) {
+            accumulated.push({ url: parsed.image, size: generationSize });
+            setVariations([...accumulated]);
+          }
+        } catch (e) { }
+      }
 
-        // AUTO-SAVE: Se estiver logado, o servidor já salvou o banner via Supabase Admin API.
-        // O cliente apenas atualiza a contagem local (perfil).
-        if (user) {
-          setTimeout(() => fetchProfile(user.id), 2000);
-        }
-      } else if (data.error) {
-        throw new Error(data.error);
-      } else {
-        throw new Error('O modelo não retornou uma imagem válida.');
+      if (accumulated.length === 0) {
+        throw new Error('O modelo não retornou uma imagem válida. Tente descrever sua ideia novamente.');
+      }
+      setProgress(100);
+
+      // AUTO-SAVE: Se estiver logado, o servidor já salvou o banner em segundo plano
+      // via SUPABASE_SERVICE_ROLE_KEY no endpoint /api/generate.
+      // O cliente apenas atualiza a contagem local.
+      if (user && accumulated.length > 0) {
+        // Aguardamos um pouco para o trigger no banco processar
+        setTimeout(() => fetchProfile(user.id), 2000);
       }
 
       setTimeout(() => {
