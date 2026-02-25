@@ -62,8 +62,6 @@ export async function POST(request) {
       }
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
-
     // Logo handling
     let brandImages = [];
     if (logoUrl) {
@@ -78,32 +76,30 @@ export async function POST(request) {
       return { inlineData: { data, mimeType } };
     });
 
-    const hasProductImages = imageParts.length > 0;
-
     const systemPrompt = `Você é um Designer Especialista em Banners para Redes Sociais de Classe Mundial.
 Sua tarefa é gerar 1 ÚNICO banner publicitário profissional de resolução 4K (${dimensions.width}x${dimensions.height}), formato "${dimensions.label}".
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
-    // ── Streamlined "Double-Shot" Logic ──────────────────────
+    // ── Optimized "Double-Shot" Logic (Sub-3.0 Priority) ──────────────────────
     let result;
-    let currentModelId = 'gemini-3-pro-image-preview';
+    let currentModelId = 'gemini-2.5-flash-image'; // Primary Optimized Model
 
     async function attemptGeneration(modelId) {
       const model = genAI.getGenerativeModel({ model: modelId });
-      console.log(`[GEMINI] 🚀 Critical Attempt with ${modelId}...`);
+      console.log(`[GEMINI] 🚀 Attempting with ${modelId}...`);
       return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
     }
 
     try {
-      // SHOT 1: Gemini 3.0 Pro (Priority)
+      // SHOT 1: Gemini 2.5 Flash Image (The requested effective sub-3.0)
       result = await attemptGeneration(currentModelId);
     } catch (err) {
       const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
       if (isTransient) {
-        console.warn(`[GEMINI] ⚠️ 3.0 Pro failed (High Demand). Switching to 2.5 Flash...`);
-        // SHOT 2: Gemini 2.5 Flash (Reliability)
-        currentModelId = 'gemini-2.5-flash-image';
+        console.warn(`[GEMINI] ⚠️ ${currentModelId} failed. Switching to 2.0 Flash...`);
+        // SHOT 2: Gemini 2.0 Flash (Fast Backup)
+        currentModelId = 'gemini-2.0-flash';
         try {
           result = await attemptGeneration(currentModelId);
         } catch (err2) {
