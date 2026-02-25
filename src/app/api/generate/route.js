@@ -157,44 +157,17 @@ OUTPUT:
 
 BRIEFING DO CLIENTE: "${prompt}"`;
 
-    // ── Retry & Fallback Logic for Gemini 503 Errors ──────────────────────
+    // ── Simplified Logic: GEMINI 3.0 PRO ONLY (Single Attempt) ──────────
     let result;
-    const maxRetriesPrimary = 5; // Reinforced priority for 3.0 Pro
-    const maxRetriesFallback = 2; // Short retry for fallback
-    let currentModelId = 'gemini-3-pro-image-preview';
-
-    async function attemptGeneration(modelId, maxRetries) {
-      const model = genAI.getGenerativeModel({ model: modelId });
-      let retryDelay = 1500; // Increased base delay
-
-      for (let i = 0; i < maxRetries; i++) {
-        try {
-          console.log(`[GEMINI] Attempting generation with ${modelId} (Try ${i + 1}/${maxRetries})...`);
-          return await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
-        } catch (err) {
-          const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
-          if (isTransient && i < maxRetries - 1) {
-            console.warn(`[GEMINI] Error 503 on ${modelId}. Retrying in ${retryDelay}ms...`);
-            await new Promise(r => setTimeout(r, retryDelay));
-            retryDelay *= 1.5; // Slightly slower backoff
-            continue;
-          }
-          throw err;
-        }
-      }
-    }
+    const currentModelId = 'gemini-3-pro-image-preview';
 
     try {
-      result = await attemptGeneration(currentModelId, maxRetriesPrimary);
+      console.log(`[GEMINI] Attempting generation with ${currentModelId}...`);
+      const model = genAI.getGenerativeModel({ model: currentModelId });
+      result = await model.generateContentStream([systemPrompt, ...brandImages, ...imageParts]);
     } catch (err) {
-      const isTransient = err.message?.includes('503') || err.status === 503 || err.message?.includes('high demand');
-      if (isTransient) {
-        console.error(`[GEMINI] ${currentModelId} failed after ${maxRetriesPrimary} retries. Falling back to gemini-2.5-flash-image...`);
-        currentModelId = 'gemini-2.5-flash-image';
-        result = await attemptGeneration(currentModelId, maxRetriesFallback);
-      } else {
-        throw err;
-      }
+      console.error(`[GEMINI] ${currentModelId} failed.`, err);
+      throw err;
     }
 
     const stream = new ReadableStream({

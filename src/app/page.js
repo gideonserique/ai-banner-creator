@@ -151,6 +151,19 @@ export default function HomePage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Restore UX warning: prevent accidental page leave during generation
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (loading) {
+        e.preventDefault();
+        e.returnValue = 'Sua arte ainda está sendo gerada! Se você sair agora, poderá perder o progresso.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [loading]);
+
   const fetchProfile = async (userId) => {
     try {
       const { data, error } = await supabase
