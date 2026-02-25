@@ -32,7 +32,7 @@ export async function POST(request) {
       .eq('key', 'active_model_id')
       .single();
 
-    const activeModelId = modelSetting?.value || "fal-ai/flux-pro/v2";
+    const activeModelId = modelSetting?.value || "fal-ai/flux-2-pro";
 
     // ── 2. Generation Limit Check ────────────────────────────────────────
     if (userId) {
@@ -91,11 +91,23 @@ export async function POST(request) {
     // ── 5. Generation Shot (Fal.ai) ──────────────────────────────────────
     console.log(`[FAL.AI] 🚀 Generating with ${activeModelId}...`);
 
+    // Model-Specific Parameter Normalization
+    let imageSizeValue;
+    if (activeModelId.includes("gpt-image")) {
+      imageSizeValue = size === "square" ? "1024x1024" : (size === "portrait" ? "1024x1536" : "1536x1024");
+    } else {
+      imageSizeValue = dimensions.fal === "square" ? "square_hd" : dimensions.fal;
+    }
+
     const input = {
       prompt: fullPrompt,
-      image_size: dimensions.fal === "square" ? "square_hd" : dimensions.fal,
-      sync_mode: true
+      image_size: imageSizeValue,
     };
+
+    // Flux-specific parameters
+    if (activeModelId.includes("flux")) {
+      input.sync_mode = true;
+    }
 
     // If we have a product image, some models (like Flux Dev) support it as image_url
     if (productUrl) {
