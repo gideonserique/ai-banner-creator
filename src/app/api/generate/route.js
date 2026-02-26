@@ -32,7 +32,7 @@ export async function POST(request) {
       .eq('key', 'active_model_id')
       .single();
 
-    const activeModelId = modelSetting?.value || "fal-ai/flux-2-pro";
+    let activeModelId = modelSetting?.value || "fal-ai/flux-2-pro";
 
     // ── 2. Generation Limit Check ────────────────────────────────────────
     if (userId) {
@@ -87,13 +87,24 @@ export async function POST(request) {
     const fullPrompt = `VOCÊ É O MELHOR DESIGNER DO MUNDO. 
     BANNER ${dimensions.label.toUpperCase()} (${dimensions.width}x${dimensions.height}).
     ESTILO: Publicidade de luxo, 4k render, iluminação cinematográfica.
-    PRODUTO/CONTEXTO: ${prompt}
+    OBJETIVO DO DESIGN: ${prompt}
     ${brandingInstruction}
     ${referenceInstruction}
     NÃO use bordas pretas. Ocupar todo o espaço. Texto apenas em Português impecável.`;
 
     // ── 5. Generation Shot (Fal.ai) ──────────────────────────────────────
-    console.log(`[FAL.AI] 🚀 Generating with ${activeModelId}...`);
+    console.log(`[FAL.AI] 🚀 Target Model: ${activeModelId}`);
+
+    // Dynamic Endpoint Promotion (Text-to-Image -> Edit/Image-to-Image)
+    if (productUrl) {
+      if (activeModelId === "fal-ai/nano-banana-pro") activeModelId = "fal-ai/nano-banana-pro/edit";
+      if (activeModelId === "fal-ai/gpt-image-1.5") activeModelId = "fal-ai/gpt-image-1.5/edit";
+      if (activeModelId === "fal-ai/flux-2-pro") activeModelId = "fal-ai/flux-2-pro/edit";
+      if (activeModelId === "fal-ai/recraft-v3") activeModelId = "fal-ai/recraft/v3/image-to-image";
+      if (activeModelId.includes("seedream")) activeModelId = "fal-ai/bytedance/seedream/v5/lite/edit";
+
+      console.log(`[FAL.AI] 🛠️ Switching to Edit Endpoint: ${activeModelId}`);
+    }
 
     // Model-Specific Parameter Normalization
     let imageSizeValue;
@@ -113,13 +124,18 @@ export async function POST(request) {
       input.sync_mode = true;
     }
 
+    // GPT-Image specific parameters
+    if (activeModelId.includes("gpt-image")) {
+      input.input_fidelity = "high";
+    }
+
     // If we have a product image, map it to the correct model parameter
     if (productUrl) {
-      if (activeModelId.includes("nano-banana") || activeModelId.includes("gpt-image")) {
-        // Nano Banana and GPT Image 1.5 usually expect a list of images
+      if (activeModelId.includes("nano-banana") || activeModelId.includes("gpt-image") || activeModelId.includes("seedream")) {
+        // These models expect a list of images
         input.image_urls = [productUrl];
       } else {
-        // Flux and Recraft usually expect a single image_url string
+        // Flux and Recraft usually expect a single image_url string for image-to-image
         input.image_url = productUrl;
       }
     }
