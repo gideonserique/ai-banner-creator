@@ -160,6 +160,7 @@ export async function POST(request) {
       await supabaseAdmin.from("banners").insert([{
         user_id: userId,
         image_url: finalImage,
+        ref_image_url: productUrl,
         prompt: prompt,
         size: size,
         model_id: activeModelId,
@@ -169,6 +170,7 @@ export async function POST(request) {
       await supabaseAdmin.from("anonymous_banners").insert([{
         session_id: sessionId,
         image_url: finalImage,
+        ref_image_url: productUrl,
         prompt: prompt,
         size: size,
         model_id: activeModelId,

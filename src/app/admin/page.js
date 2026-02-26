@@ -153,12 +153,30 @@ export default function AdminDashboard() {
         }
     }
 
+    async function handleDownload(url, filename) {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename || 'banner-imagem.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            console.error('Download failed:', e);
+            window.open(url, '_blank');
+        }
+    }
+
     async function handleDeleteUser() {
         if (!deleteConfirm) return;
         setDeleting(true);
         setDeleteMsg('');
         try {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: session } = await supabase.auth.getSession();
             const res = await fetch('/api/admin/delete-user', {
                 method: 'DELETE',
                 headers: {
@@ -213,14 +231,14 @@ export default function AdminDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                             <span style={{ fontSize: '22px' }}>✦</span>
                             <span style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '20px', background: 'linear-gradient(135deg, #f97316, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>BannerIA</span>
-                            <span style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '1px' }}>ADMIN</span>
+                            <span style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '1px' }}>ADMIN v3</span>
                         </div>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                            {new Date().toLocaleString('pt-BR')} • Dados excluem admin
+                            {new Date().toLocaleString('pt-BR')} • Botoes Fixos Ativos
                         </p>
                     </div>
-                    <button onClick={() => window.location.reload()} style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '8px 18px', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-                        🔄 Atualizar
+                    <button onClick={() => window.location.reload()} style={{ background: '#f97316', border: 'none', color: '#fff', padding: '10px 22px', borderRadius: '20px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', boxShadow: '0 4px 12px rgba(249,115,22,0.3)' }}>
+                        🔄 FORÇAR ATUALIZAÇÃO
                     </button>
                 </div>
 
@@ -562,7 +580,31 @@ export default function AdminDashboard() {
                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Últimos {recentActivity.length} banners gerados</div>
                         {recentActivity.map((item, i) => (
                             <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                <img src={item.image_url} alt="" style={{ width: 52, height: 52, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} onError={e => e.target.style.display = 'none'} />
+                                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                    <div style={{ position: 'relative', textAlign: 'center' }}>
+                                        <img src={item.image_url} alt="" style={{ width: 56, height: 56, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                                        <button
+                                            onClick={() => handleDownload(item.image_url, `banner-${i}.png`)}
+                                            style={{ position: 'absolute', bottom: '-4px', right: '-4px', background: '#f97316', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.3)', color: '#fff', fontSize: '10px', zIndex: 10 }}
+                                            title="Baixar Banner"
+                                        >
+                                            📥
+                                        </button>
+                                    </div>
+                                    {item.ref_image_url && (
+                                        <div style={{ position: 'relative', textAlign: 'center' }}>
+                                            <img src={item.ref_image_url} alt="" style={{ width: 56, height: 56, borderRadius: '8px', objectFit: 'cover', border: '1px solid #f97316', padding: '1px', background: '#f97316' }} />
+                                            <div style={{ position: 'absolute', top: '-6px', left: '-6px', background: '#f97316', color: '#fff', fontSize: '8px', fontWeight: 900, padding: '1px 4px', borderRadius: '4px', zIndex: 5 }}>REF</div>
+                                            <button
+                                                onClick={() => handleDownload(item.ref_image_url, `ref-${i}.png`)}
+                                                style={{ position: 'absolute', bottom: '-4px', right: '-4px', background: '#22c55e', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.3)', color: '#fff', fontSize: '10px', zIndex: 10 }}
+                                                title="Baixar Referência"
+                                            >
+                                                📥
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {item.user_name}
@@ -621,39 +663,81 @@ export default function AdminDashboard() {
                         ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
                                 {anonymousBanners.map((item, i) => (
-                                    <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
-                                        <img
-                                            src={item.image_url}
-                                            alt="Banner anônimo"
-                                            style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
-                                            onError={e => { e.target.style.display = 'none'; }}
-                                        />
-                                        <div style={{ padding: '10px 12px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                                    <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ position: 'relative' }}>
+                                            <img
+                                                src={item.image_url}
+                                                alt="Banner anônimo"
+                                                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                                                onError={e => { e.target.style.display = 'none'; }}
+                                            />
+                                            {item.ref_image_url && (
+                                                <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <img
+                                                            src={item.ref_image_url}
+                                                            alt=""
+                                                            style={{ width: 64, height: 64, borderRadius: '10px', objectFit: 'cover', border: '3px solid #f97316', boxShadow: '0 8px 16px rgba(0,0,0,0.6)' }}
+                                                        />
+                                                        <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: '#ec4899', color: '#fff', fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>REF ORIGINAL</div>
+                                                        <button
+                                                            onClick={() => handleDownload(item.ref_image_url, `ref-anon-${i}.png`)}
+                                                            style={{ position: 'absolute', bottom: '-8px', right: '-8px', background: '#ec4899', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 8px rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px', zIndex: 100 }}
+                                                            title="Baixar Foto Original"
+                                                        >
+                                                            📥
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Dedicated Action Row */}
+                                        <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+                                            <button
+                                                onClick={() => handleDownload(item.image_url, `banner-anon-${i}.png`)}
+                                                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#f97316', color: '#fff', fontWeight: 800, fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                            >
+                                                📥 BAIXAR BANNER
+                                            </button>
+                                            {item.ref_image_url && (
+                                                <button
+                                                    onClick={() => handleDownload(item.ref_image_url, `ref-anon-${i}.png`)}
+                                                    style={{ padding: '0 12px', borderRadius: '8px', border: '1px solid #ec4899', background: 'transparent', color: '#ec4899', fontWeight: 700, fontSize: '10px', cursor: 'pointer' }}
+                                                    title="Baixar Referência"
+                                                >
+                                                    REF
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div style={{ padding: '12px', paddingTop: '0' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-primary)', height: '2.8em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginTop: '10px', lineHeight: '1.4' }}>
                                                 {item.prompt || '—'}
                                             </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                                                    {{ square: '▣ Post', portrait: '▯ Story', landscape: '▬ YouTube' }[item.size] || item.size}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                                                    {{ square: '▣ POST', portrait: '▯ STORY', landscape: '▬ YOUTUBE' }[item.size] || item.size}
                                                 </span>
                                                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                                                     {new Date(item.created_at).toLocaleDateString('pt-BR')}
                                                 </span>
                                             </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                                                 {(() => {
-                                                    const m = MODELS.find(mod => mod.id === item.model_id);
+                                                    const cleanModelId = item.model_id?.replace('/edit', '');
+                                                    const m = MODELS.find(mod => mod.id === cleanModelId);
                                                     return (
                                                         <div style={{
                                                             fontSize: '8px',
                                                             color: m?.color || '#a78bfa',
-                                                            fontWeight: 800,
+                                                            fontWeight: 900,
                                                             textTransform: 'uppercase',
                                                             background: m ? `${m.color}1a` : 'rgba(255,255,255,0.05)',
-                                                            padding: '1px 6px',
+                                                            padding: '2px 8px',
                                                             borderRadius: '4px'
                                                         }}>
-                                                            {m?.label || item.model_id || 'Gemini 3.0'}
+                                                            {m?.label || item.model_id?.split('/').pop() || 'GEMINI'}
                                                         </div>
                                                     );
                                                 })()}

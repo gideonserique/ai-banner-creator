@@ -59,8 +59,11 @@ export default function HomePage() {
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showCaptionPrompt, setShowCaptionPrompt] = useState(false);
+  const [generatingCaption, setGeneratingCaption] = useState(false);
   const [isHighDemand, setIsHighDemand] = useState(false);
   const [guestMode, setGuestMode] = useState(false);
+  const [activeBannerForCaption, setActiveBannerForCaption] = useState(null); // { url, size, index }
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -390,17 +393,52 @@ export default function HomePage() {
       setShowPostGenModal(true);
       return;
     }
+
+    // Se já tem legenda no estado local (variations tem caption?), vai direto.
+    // Atualmente variations é só [{url, size}]. Vamos expandir para manter legendas se geradas agora.
+    const variation = variations[index];
+    if (variation.caption) {
+      executeDownload(base64, size, index);
+      return;
+    }
+
+    // Se é plano pago, pergunta da legenda
+    if (['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(userData.subscriptionTier)) {
+      setActiveBannerForCaption({ url: base64, size, index, type: 'download' });
+      setShowCaptionPrompt(true);
+    } else {
+      executeDownload(base64, size, index);
+    }
+  };
+
+  const executeDownload = (base64, size, index) => {
     const link = document.createElement('a');
     link.href = base64;
     link.download = `banner-${size}-${index + 1}.png`;
     link.click();
   };
 
-  const handleShare = async (base64, size) => {
+  const handleShare = async (base64, size, index) => {
     if (!user) {
       setShowPostGenModal(true);
       return;
     }
+
+    const variation = variations[index];
+    if (variation.caption) {
+      executeShare(base64, size, variation.caption);
+      return;
+    }
+
+    if (['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(userData.subscriptionTier)) {
+      setActiveBannerForCaption({ url: base64, size, index, type: 'share' });
+      setShowCaptionPrompt(true);
+    } else {
+      executeShare(base64, size);
+    }
+  };
+
+  const executeShare = async (base64, size, caption = '') => {
     try {
       const res = await fetch(base64);
       const blob = await res.blob();
@@ -410,6 +448,7 @@ export default function HomePage() {
         await navigator.share({
           files: [file],
           title: 'Meu Banner de Restaurante',
+          text: caption || 'Confira esse banner que gerei no BannerIA! 🍕✨',
         });
       } else {
         alert('Compartilhamento não suportado neste navegador. Tente baixar a imagem.');
@@ -417,6 +456,72 @@ export default function HomePage() {
     } catch (err) {
       console.error('Erro ao compartilhar:', err);
     }
+  };
+
+  const handleGenerateMagicCaption = async () => {
+    if (!activeBannerForCaption) return;
+    setGeneratingCaption(true);
+    try {
+      const response = await fetch('/api/caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await response.json();
+      if (data.caption) {
+        // 1. Atualizar estado local
+        const newVariations = [...variations];
+        newVariations[activeBannerForCaption.index].caption = data.caption;
+        setVariations(newVariations);
+
+        // 2. Salvar no Banco de Dados (Banners existentes para o user)
+        // Como o banner foi salvo no final da geração, precisamos achar o ID dele.
+        // Ou simplesmente atualizar o registro mais recente desse user para esse prompt.
+        const { data: latestBanner } = await supabase
+          .from('banners')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('image_url', activeBannerForCaption.url)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestBanner) {
+          await supabase
+            .from('banners')
+            .update({ caption: data.caption })
+            .eq('id', latestBanner.id);
+        }
+
+        // 3. Prosseguir com a ação (download ou share)
+        if (activeBannerForCaption.type === 'download') {
+          executeDownload(activeBannerForCaption.url, activeBannerForCaption.size, activeBannerForCaption.index);
+        } else {
+          executeShare(activeBannerForCaption.url, activeBannerForCaption.size, data.caption);
+        }
+        setShowCaptionPrompt(false);
+      } else {
+        throw new Error(data.error || 'Erro ao gerar legenda');
+      }
+    } catch (err) {
+      console.error('Erro de legenda:', err);
+      alert(`Erro: ${err.message}`);
+    } finally {
+      setGeneratingCaption(false);
+    }
+  };
+
+  const handleCopyCaption = (text) => {
+    navigator.clipboard.writeText(text);
+    const btns = document.querySelectorAll(`.${styles.selectBtn}`);
+    btns.forEach(btn => {
+      if (btn.innerText.includes('Copia')) {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copiado! ✅';
+        setTimeout(() => { btn.innerText = originalText; }, 2000);
+      }
+    });
   };
 
   const savePendingAndRedirect = () => {
@@ -830,7 +935,6 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Error Modal (Beautiful UI/UX) */}
         {showErrorModal && (
           <div className={styles.modalOverlay}>
             <div className={styles.modalContent} style={{ maxWidth: '440px', textAlign: 'center', border: `1px solid ${isHighDemand ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
@@ -864,6 +968,86 @@ export default function HomePage() {
                   Entendi, vou tentar de novo
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showCaptionPrompt && activeBannerForCaption && (
+          <div className={styles.modalOverlay} onClick={() => setShowCaptionPrompt(false)}>
+            <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+              <h2 className={styles.authTitle} style={{ fontSize: '24px' }}>Legenda Mágica 🪄</h2>
+
+              {variations[activeBannerForCaption.index]?.caption ? (
+                <>
+                  <div style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    padding: '15px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    whiteSpace: 'pre-wrap',
+                    marginBottom: '20px',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    textAlign: 'left',
+                    border: '1px solid var(--border)'
+                  }}>
+                    {variations[activeBannerForCaption.index].caption}
+                  </div>
+                  <div className={styles.modalActions}>
+                    <button
+                      className={styles.selectBtn}
+                      onClick={() => handleCopyCaption(variations[activeBannerForCaption.index].caption)}
+                    >
+                      📋 Copiar Legenda
+                    </button>
+                    <button
+                      className={styles.primaryBtn}
+                      onClick={() => {
+                        if (activeBannerForCaption.type === 'download') {
+                          executeDownload(activeBannerForCaption.url, activeBannerForCaption.size, activeBannerForCaption.index);
+                        } else {
+                          executeShare(activeBannerForCaption.url, activeBannerForCaption.size, variations[activeBannerForCaption.index].caption);
+                        }
+                        setShowCaptionPrompt(false);
+                      }}
+                    >
+                      {activeBannerForCaption.type === 'download' ? 'Baixar Imagem' : 'Compartilhar'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className={styles.heroSub} style={{ fontSize: '16px', marginBottom: '10px' }}>
+                    Quer que a nossa IA crie uma legenda persuasiva para o seu post agora mesmo?
+                  </p>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                    Baseado em seu briefing: "{prompt.substring(0, 40)}..."
+                  </div>
+                  <div className={styles.modalActions}>
+                    <button
+                      className={styles.primaryBtn}
+                      onClick={handleGenerateMagicCaption}
+                      disabled={generatingCaption}
+                    >
+                      {generatingCaption ? <span className={styles.spinner} /> : '✨ Sim, Criar Legenda'}
+                    </button>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={() => {
+                        if (activeBannerForCaption.type === 'download') {
+                          executeDownload(activeBannerForCaption.url, activeBannerForCaption.size, activeBannerForCaption.index);
+                        } else {
+                          executeShare(activeBannerForCaption.url, activeBannerForCaption.size);
+                        }
+                        setShowCaptionPrompt(false);
+                      }}
+                    >
+                      Não, apenas {activeBannerForCaption.type === 'download' ? 'baixar' : 'compartilhar'}
+                    </button>
+                  </div>
+                </>
+              )}
+              <button className={styles.closeModal} onClick={() => setShowCaptionPrompt(false)}>×</button>
             </div>
           </div>
         )}
@@ -946,7 +1130,7 @@ export default function HomePage() {
                     <button className={styles.selectBtn} onClick={() => handleDownload(v.url, v.size, i)}>
                       Baixar Banner
                     </button>
-                    <button className={styles.shareBtn} onClick={() => handleShare(v.url, v.size)}>
+                    <button className={styles.shareBtn} onClick={() => handleShare(v.url, v.size, i)}>
                       Compartilhar
                     </button>
                   </div>
