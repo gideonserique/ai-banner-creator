@@ -106,27 +106,24 @@ export async function POST(request) {
       console.log(`[FAL.AI] 🛠️ Switching to Edit Endpoint: ${activeModelId}`);
     }
 
-    // Model-Specific Parameter Normalization
-    let imageSizeValue;
-    if (activeModelId.includes("gpt-image")) {
-      imageSizeValue = size === "square" ? "1024x1024" : (size === "portrait" ? "1024x1536" : "1536x1024");
-    } else {
-      imageSizeValue = dimensions.fal === "square" ? "square_hd" : dimensions.fal;
-    }
-
     const input = {
       prompt: fullPrompt,
-      image_size: imageSizeValue,
     };
 
-    // Flux-specific parameters
-    if (activeModelId.includes("flux")) {
-      input.sync_mode = true;
-    }
-
-    // GPT-Image specific parameters
-    if (activeModelId.includes("gpt-image")) {
+    // Model-Specific Parameter Normalization
+    if (activeModelId.includes("nano-banana")) {
+      // Nano Banana uses 'aspect_ratio' with colon format (e.g. "16:9")
+      const ratioMap = { square: "1:1", portrait: "9:16", landscape: "16:9" };
+      input.aspect_ratio = ratioMap[size] || "1:1";
+    } else if (activeModelId.includes("gpt-image")) {
+      // GPT Image expects dimensions like '1024x1024'
+      const gptMap = { square: "1024x1024", portrait: "1024x1536", landscape: "1536x1024" };
+      input.image_size = gptMap[size] || "1024x1024";
       input.input_fidelity = "high";
+    } else {
+      // Flux and others usually use 'image_size' with slug format
+      input.image_size = dimensions.fal;
+      if (activeModelId.includes("flux")) input.sync_mode = true;
     }
 
     // If we have a product image, map it to the correct model parameter
@@ -135,10 +132,10 @@ export async function POST(request) {
         activeModelId.includes("gpt-image") ||
         activeModelId.includes("seedream") ||
         activeModelId.includes("flux-2-pro")) {
-        // These models expect a list of images (image_urls)
+        // Nano Banana Edit, GPT Image Edit, Seedream and Flux 2 Pro Edit expect image_urls array
         input.image_urls = [productUrl];
       } else {
-        // Recraft (and standard Flux) usually expect a single image_url string for image-to-image
+        // Recraft (and standard Flux) expect a single image_url string
         input.image_url = productUrl;
       }
     }
