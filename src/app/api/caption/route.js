@@ -35,11 +35,9 @@ BRIEFING: "${prompt}"`;
 
         const result = await fal.subscribe("fal-ai/any-llm", {
             input: {
-                model: "google/gemini-2.0-flash",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: `Crie uma legenda para: ${prompt}` }
-                ],
+                model: "google/gemini-2.0-flash-001",
+                system_prompt: systemPrompt,
+                prompt: `Crie uma legenda para: ${prompt}`,
                 max_tokens: 1000,
                 temperature: 0.7
             },
