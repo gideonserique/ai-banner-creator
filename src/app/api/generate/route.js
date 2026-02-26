@@ -131,11 +131,14 @@ export async function POST(request) {
 
     // If we have a product image, map it to the correct model parameter
     if (productUrl) {
-      if (activeModelId.includes("nano-banana") || activeModelId.includes("gpt-image") || activeModelId.includes("seedream")) {
-        // These models expect a list of images
+      if (activeModelId.includes("nano-banana") ||
+        activeModelId.includes("gpt-image") ||
+        activeModelId.includes("seedream") ||
+        activeModelId.includes("flux-2-pro")) {
+        // These models expect a list of images (image_urls)
         input.image_urls = [productUrl];
       } else {
-        // Flux and Recraft usually expect a single image_url string for image-to-image
+        // Recraft (and standard Flux) usually expect a single image_url string for image-to-image
         input.image_url = productUrl;
       }
     }
