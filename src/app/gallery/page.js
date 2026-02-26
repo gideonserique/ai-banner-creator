@@ -21,6 +21,7 @@ export default function GalleryPage() {
     const [showCaptionPrompt, setShowCaptionPrompt] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', id: null }); // type: 'banner' ou 'caption'
     const [editingCaption, setEditingCaption] = useState({ id: null, text: '' });
+    const [userData, setUserData] = useState({ subscriptionTier: 'free' });
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -38,6 +39,20 @@ export default function GalleryPage() {
 
     const fetchBanners = async (userId) => {
         try {
+            // Fetch profile for tier gating
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('subscription_tier')
+                .eq('id', userId)
+                .single();
+
+            if (profile) {
+                const isAdmin = (await supabase.auth.getSession()).data.session?.user?.email === 'gideongsr94@gmail.com';
+                setUserData({
+                    subscriptionTier: isAdmin ? 'unlimited_annual' : (profile.subscription_tier || 'free')
+                });
+            }
+
             const { data, error } = await supabase
                 .from('banners')
                 .select('*')
@@ -54,11 +69,36 @@ export default function GalleryPage() {
         }
     };
 
-    const handleDownload = (base64, size, id) => {
-        const link = document.createElement('a');
-        link.href = base64;
-        link.download = `meu-banner-${size}-${id}.png`;
-        link.click();
+    const handleDownload = (banner) => {
+        // Se é plano pago e não tem legenda, pergunta
+        if (['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(userData.subscriptionTier) && !banner.caption) {
+            setSharingBanner({ ...banner, type: 'download' });
+            setShowCaptionPrompt(true);
+        } else {
+            executeDownload(banner.image_url, banner.size, banner.id);
+        }
+    };
+
+    const executeDownload = async (url, size, id) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `meu-banner-${size}-${id}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('Erro ao baixar:', err);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `meu-banner-${size}-${id}.png`;
+            link.target = '_blank';
+            link.click();
+        }
     };
 
     const handleShare = async (banner) => {
@@ -295,11 +335,15 @@ export default function GalleryPage() {
                                     <button
                                         className={styles.primaryBtn}
                                         onClick={() => {
-                                            executeShare(sharingBanner.image_url, sharingBanner.size, sharingBanner.caption);
+                                            if (sharingBanner.type === 'download') {
+                                                executeDownload(sharingBanner.image_url, sharingBanner.size, sharingBanner.id);
+                                            } else {
+                                                executeShare(sharingBanner.image_url, sharingBanner.size, sharingBanner.caption);
+                                            }
                                             setShowCaptionPrompt(false);
                                         }}
                                     >
-                                        Compartilhar com Legenda
+                                        {sharingBanner.type === 'download' ? 'Baixar com Legenda' : 'Compartilhar com Legenda'}
                                     </button>
                                     <button
                                         className={styles.selectBtn}
@@ -332,11 +376,15 @@ export default function GalleryPage() {
                                     <button
                                         className={styles.secondaryBtn}
                                         onClick={() => {
-                                            executeShare(sharingBanner.image_url, sharingBanner.size);
+                                            if (sharingBanner.type === 'download') {
+                                                executeDownload(sharingBanner.image_url, sharingBanner.size, sharingBanner.id);
+                                            } else {
+                                                executeShare(sharingBanner.image_url, sharingBanner.size);
+                                            }
                                             setShowCaptionPrompt(false);
                                         }}
                                     >
-                                        Apenas a Imagem
+                                        Apenas {sharingBanner.type === 'download' ? 'Baixar' : 'Compartilhar'}
                                     </button>
                                 </div>
                             </>
@@ -553,7 +601,7 @@ export default function GalleryPage() {
                                     <button
                                         className={styles.selectBtn}
                                         style={{ flex: 1, padding: '10px' }}
-                                        onClick={() => handleDownload(b.image_url, b.size, b.id)}
+                                        onClick={() => handleDownload(b)}
                                     >
                                         Baixar
                                     </button>

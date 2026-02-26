@@ -394,28 +394,42 @@ export default function HomePage() {
       return;
     }
 
-    // Se já tem legenda no estado local (variations tem caption?), vai direto.
-    // Atualmente variations é só [{url, size}]. Vamos expandir para manter legendas se geradas agora.
     const variation = variations[index];
-    if (variation.caption) {
-      executeDownload(base64, size, index);
-      return;
-    }
 
     // Se é plano pago, pergunta da legenda
     if (['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(userData.subscriptionTier)) {
-      setActiveBannerForCaption({ url: base64, size, index, type: 'download' });
-      setShowCaptionPrompt(true);
+      if (variation.caption) {
+        executeDownload(base64, size, index);
+      } else {
+        setActiveBannerForCaption({ url: base64, size, index, type: 'download' });
+        setShowCaptionPrompt(true);
+      }
     } else {
       executeDownload(base64, size, index);
     }
   };
 
-  const executeDownload = (base64, size, index) => {
-    const link = document.createElement('a');
-    link.href = base64;
-    link.download = `banner-${size}-${index + 1}.png`;
-    link.click();
+  const executeDownload = async (url, size, index) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `banner-${size}-${index + 1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Erro ao baixar:', err);
+      // Fallback simples
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `banner-${size}-${index + 1}.png`;
+      link.target = '_blank';
+      link.click();
+    }
   };
 
   const handleShare = async (base64, size, index) => {
@@ -425,14 +439,15 @@ export default function HomePage() {
     }
 
     const variation = variations[index];
-    if (variation.caption) {
-      executeShare(base64, size, variation.caption);
-      return;
-    }
 
+    // Se é plano pago, pergunta da legenda
     if (['starter', 'unlimited_monthly', 'unlimited_annual', 'premium'].includes(userData.subscriptionTier)) {
-      setActiveBannerForCaption({ url: base64, size, index, type: 'share' });
-      setShowCaptionPrompt(true);
+      if (variation.caption) {
+        executeShare(base64, size, variation.caption);
+      } else {
+        setActiveBannerForCaption({ url: base64, size, index, type: 'share' });
+        setShowCaptionPrompt(true);
+      }
     } else {
       executeShare(base64, size);
     }
