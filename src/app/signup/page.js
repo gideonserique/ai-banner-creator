@@ -36,7 +36,13 @@ export default function SignupPage() {
     });
 
     const formatWhatsApp = (value) => {
+        // Se começar com +, permite formato livre internacional
+        if (value.startsWith('+')) {
+            return value.replace(/[^\d+]/g, '').slice(0, 20);
+        }
+
         const numbers = value.replace(/\D/g, '');
+        // Formato brasileiro apenas se tiver até 11 dígitos e não começar com +
         if (numbers.length <= 11) {
             let formatted = numbers;
             if (numbers.length > 0) formatted = `(${numbers.slice(0, 2)}`;
@@ -44,7 +50,8 @@ export default function SignupPage() {
             if (numbers.length > 7) formatted += `-${numbers.slice(7, 11)}`;
             return formatted;
         }
-        return value.slice(0, 15);
+        // Se for maior que 11, trata como formato livre (pode ser internacional sem +)
+        return numbers.slice(0, 20);
     };
 
     const handleChange = (e) => {
@@ -211,7 +218,7 @@ export default function SignupPage() {
                         <input
                             type="text"
                             name="whatsapp"
-                            placeholder="(00) 00000-0000"
+                            placeholder="+55 00 00000-0000"
                             required
                             onInvalid={(e) => e.target.setCustomValidity('O WhatsApp é importante para suas artes.')}
                             onInput={(e) => e.target.setCustomValidity('')}

@@ -125,6 +125,21 @@ export default function ProfilePage() {
         window.location.href = '/login';
     };
 
+    const formatWhatsApp = (value) => {
+        if (value.startsWith('+')) {
+            return value.replace(/[^\d+]/g, '').slice(0, 20);
+        }
+        const numbers = value.replace(/\D/g, '');
+        if (numbers.length <= 11) {
+            let formatted = numbers;
+            if (numbers.length > 0) formatted = `(${numbers.slice(0, 2)}`;
+            if (numbers.length > 2) formatted += `) ${numbers.slice(2, 7)}`;
+            if (numbers.length > 7) formatted += `-${numbers.slice(7, 11)}`;
+            return formatted;
+        }
+        return numbers.slice(0, 20);
+    };
+
     async function fetchUserAndProfile() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -560,7 +575,13 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <label className={styles.sizeLabel} style={{ marginBottom: '5px', display: 'block' }}>WhatsApp</label>
-                                <input className={styles.textarea} style={{ padding: '12px' }} value={profile.whatsapp} onChange={e => setProfile(prev => ({ ...prev, whatsapp: e.target.value }))} placeholder="(99) 99999-9999" />
+                                <input
+                                    className={styles.textarea}
+                                    style={{ padding: '12px' }}
+                                    value={profile.whatsapp}
+                                    onChange={e => setProfile(prev => ({ ...prev, whatsapp: formatWhatsApp(e.target.value) }))}
+                                    placeholder="+55 00 00000-0000"
+                                />
                             </div>
                             <button className={styles.primaryBtn} disabled={saving}>{saving ? <span className={styles.spinner} /> : 'Salvar Alterações'}</button>
                         </form>
