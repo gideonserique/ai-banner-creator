@@ -80,12 +80,16 @@ export async function POST(request) {
       ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Utilize o logotipo fornecido de forma harmônica. Baseie as cores no logotipo.`
       : (companyName ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Inclua o nome da empresa "${companyName}" de forma elegante.` : "");
 
+    const referenceInstruction = productUrl
+      ? `LEITURA PROFUNDA DA REFERÊNCIA (OBRIGATÓRIO): Analise cada detalhe da foto do produto em anexo. MANTENHA as características originais (forma, cores, texturas) e use o comando do usuário apenas para melhorar o cenário e a iluminação ao redor do produto.`
+      : "GERE O PRODUTO DESCRITO COM REALISMO EXTREMO.";
+
     const fullPrompt = `VOCÊ É O MELHOR DESIGNER DO MUNDO. 
     BANNER ${dimensions.label.toUpperCase()} (${dimensions.width}x${dimensions.height}).
     ESTILO: Publicidade de luxo, 4k render, iluminação cinematográfica.
     PRODUTO/CONTEXTO: ${prompt}
     ${brandingInstruction}
-    ${productUrl ? "AUMENTE A QUALIDADE DO PRODUTO EM ANEXO E INTEGRE-O NO CENÁRIO." : "GERE O PRODUTO DESCRITO COM REALISMO EXTREMO."}
+    ${referenceInstruction}
     NÃO use bordas pretas. Ocupar todo o espaço. Texto apenas em Português impecável.`;
 
     // ── 5. Generation Shot (Fal.ai) ──────────────────────────────────────
@@ -109,11 +113,13 @@ export async function POST(request) {
       input.sync_mode = true;
     }
 
-    // If we have a product image, some models (like Flux Dev) support it as image_url
+    // If we have a product image, map it to the correct model parameter
     if (productUrl) {
-      if (activeModelId.includes("flux") || activeModelId.includes("recraft")) {
-        // Recraft and Flux handle image-to-image or ref differently, 
-        // for simplicity we'll try to pass it as image_url or image input
+      if (activeModelId.includes("nano-banana") || activeModelId.includes("gpt-image")) {
+        // Nano Banana and GPT Image 1.5 usually expect a list of images
+        input.image_urls = [productUrl];
+      } else {
+        // Flux and Recraft usually expect a single image_url string
         input.image_url = productUrl;
       }
     }
