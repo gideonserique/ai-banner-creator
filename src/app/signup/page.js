@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -19,7 +19,7 @@ const translateError = (msg) => {
     return ERROR_MAP[msg] || msg || 'Ocorreu um erro inesperado. Tente novamente.';
 };
 
-export default function SignupPage() {
+function SignupContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const fileInputRef = useRef(null);
@@ -44,29 +44,50 @@ export default function SignupPage() {
         const plan = searchParams.get('plan');
         if (coupon || plan) {
             localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
-            console.log('🎟️ Promo capturada:', { coupon, plan });
+            console.log('🎟️ [SIGNUP] Promo capturada:', { coupon, plan });
         }
 
-        async function checkSession() {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    // Se já estiver logado, não precisa ver o form
-                    const pending = localStorage.getItem('pendingPromo');
-                    if (pending || coupon || plan) {
-                        router.push('/profile');
-                    } else {
-                        router.push('/');
-                    }
-                } else {
-                    setCheckingAuth(false);
-                }
-            } catch (err) {
-                console.error('Erro ao verificar sessão:', err);
+        let isMounted = true;
+
+        const performRedirect = () => {
+            if (!isMounted) return;
+            const pending = localStorage.getItem('pendingPromo');
+            console.log('🚀 [SIGNUP] Redirecionando usuário logado...');
+            if (pending || coupon || plan) {
+                window.location.replace('/profile');
+            } else {
+                window.location.replace('/');
+            }
+        };
+
+        // Aggressive checks
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user) {
+                performRedirect();
+            } else {
                 setCheckingAuth(false);
             }
-        }
-        checkSession();
+        });
+
+        // Initial check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                performRedirect();
+            } else {
+                setCheckingAuth(false);
+            }
+        });
+
+        // Timeout fallback: se em 2 segundos não resolveu session, mostra o form
+        const timer = setTimeout(() => {
+            if (isMounted) setCheckingAuth(false);
+        }, 2000);
+
+        return () => {
+            isMounted = false;
+            subscription?.unsubscribe();
+            clearTimeout(timer);
+        };
     }, [searchParams, router]);
 
     const formatWhatsApp = (value) => {
@@ -172,11 +193,10 @@ export default function SignupPage() {
 
                 const pending = localStorage.getItem('pendingPromo');
                 if (pending) {
-                    router.push('/profile');
+                    window.location.replace('/profile');
                 } else {
-                    router.push('/');
+                    window.location.replace('/');
                 }
-                router.refresh();
             }
         } catch (err) {
             setError(translateError(err.message));
@@ -330,5 +350,17 @@ export default function SignupPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function SignupPage() {
+    return (
+        <Suspense fallback={
+            <div className={styles.authContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className={styles.spinner} style={{ width: '40px', height: '40px' }} />
+            </div>
+        }>
+            <SignupContent />
+        </Suspense>
     );
 }

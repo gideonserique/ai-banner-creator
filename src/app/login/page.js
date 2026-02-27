@@ -17,8 +17,9 @@ const translateError = (msg) => {
     return ERROR_MAP[msg] || msg || 'Ocorreu um erro ao entrar. Tente novamente.';
 };
 
-export default function LoginPage() {
+function LoginContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -35,29 +36,50 @@ export default function LoginPage() {
         const plan = searchParams.get('plan');
         if (coupon || plan) {
             localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
-            console.log('🎟️ Promo capturada (Login):', { coupon, plan });
+            console.log('🎟️ [LOGIN] Promo capturada:', { coupon, plan });
         }
 
-        async function checkSession() {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    // Se já estiver logado, manda pro perfil ou home
-                    const pending = localStorage.getItem('pendingPromo');
-                    if (pending || coupon || plan) {
-                        router.push('/profile');
-                    } else {
-                        router.push('/');
-                    }
-                } else {
-                    setCheckingAuth(false);
-                }
-            } catch (err) {
-                console.error('Erro ao verificar sessão:', err);
+        let isMounted = true;
+
+        const performRedirect = () => {
+            if (!isMounted) return;
+            const pending = localStorage.getItem('pendingPromo');
+            console.log('🚀 [LOGIN] Redirecionando usuário logado...');
+            if (pending || coupon || plan) {
+                window.location.replace('/profile');
+            } else {
+                window.location.replace('/');
+            }
+        };
+
+        // Aggressive checks
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user) {
+                performRedirect();
+            } else {
                 setCheckingAuth(false);
             }
-        }
-        checkSession();
+        });
+
+        // Initial check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                performRedirect();
+            } else {
+                setCheckingAuth(false);
+            }
+        });
+
+        // Timeout fallback
+        const timer = setTimeout(() => {
+            if (isMounted) setCheckingAuth(false);
+        }, 2000);
+
+        return () => {
+            isMounted = false;
+            subscription?.unsubscribe();
+            clearTimeout(timer);
+        };
     }, [searchParams, router]);
 
     const handleChange = (e) => {
@@ -79,11 +101,10 @@ export default function LoginPage() {
 
             const pending = localStorage.getItem('pendingPromo');
             if (pending) {
-                router.push('/profile');
+                window.location.replace('/profile');
             } else {
-                router.push('/');
+                window.location.replace('/');
             }
-            router.refresh();
         } catch (err) {
             setError(translateError(err.message));
         } finally {
@@ -156,5 +177,17 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className={styles.authContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className={styles.spinner} style={{ width: '40px', height: '40px' }} />
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }

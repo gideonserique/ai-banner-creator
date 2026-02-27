@@ -102,7 +102,8 @@ export default function HomePage() {
 
         // Marketing Flow Redirect: Se logou com promo pendente, leva pro perfil
         if (localStorage.getItem('pendingPromo')) {
-          router.push('/profile');
+          console.log('🚀 [HOME] Redirecionando usuário para /profile (promo detectada na carga inicial)');
+          window.location.replace('/profile');
           return;
         }
       }
@@ -143,7 +144,8 @@ export default function HomePage() {
 
         // Marketing Flow Redirect: Se logou/cadastrou e tem promo pendente, leva pro perfil
         if (localStorage.getItem('pendingPromo')) {
-          router.push('/profile');
+          console.log('🚀 [HOME] Redirecionando usuário para /profile (promo detectada via listener)');
+          window.location.replace('/profile');
           return;
         }
 
