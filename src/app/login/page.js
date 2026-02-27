@@ -35,7 +35,14 @@ export default function LoginPage() {
             localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
             console.log('🎟️ Promo capturada (Login):', { coupon, plan });
         }
-    }, [searchParams]);
+
+        // Se já estiver logado e chegou aqui com promo, manda pro perfil
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user && (coupon || plan || localStorage.getItem('pendingPromo'))) {
+                router.push('/profile');
+            }
+        });
+    }, [searchParams, router]);
 
     const handleChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
