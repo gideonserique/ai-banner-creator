@@ -165,6 +165,23 @@ export default function ProfilePage() {
                         subscription_expires_at: data.subscription_expires_at || null,
                         isAdmin: isAdmin,
                     });
+
+                    // AUTO-CHECKOUT: Se houver uma promo pendente no localStorage, dispara agora
+                    if (data.subscription_tier === 'free' || !data.subscription_tier) {
+                        const pending = localStorage.getItem('pendingPromo');
+                        if (pending) {
+                            try {
+                                const { coupon, plan } = JSON.parse(pending);
+                                localStorage.removeItem('pendingPromo');
+                                if (plan) {
+                                    console.log('🚀 Disparando auto-checkout para:', { plan, coupon });
+                                    handleSubscribe(plan, coupon);
+                                }
+                            } catch (e) {
+                                console.error('Erro no auto-checkout:', e);
+                            }
+                        }
+                    }
                 }
             }
         } catch (err) {
@@ -242,14 +259,19 @@ export default function ProfilePage() {
         }
     };
 
-    const handleSubscribe = async (planSlug) => {
+    const handleSubscribe = async (planSlug, couponCode = null) => {
         if (planSlug === 'free') return;
         setCheckoutLoading(planSlug); setError('');
         try {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, email: user.email, planId: planSlug }),
+                body: JSON.stringify({
+                    userId: user.id,
+                    email: user.email,
+                    planId: planSlug,
+                    coupon: couponCode
+                }),
             });
             const data = await response.json();
             if (data.url) { window.location.href = data.url; }

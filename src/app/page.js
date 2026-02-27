@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
@@ -36,6 +37,8 @@ const UX_PHRASES = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('square');
   const [images, setImages] = useState([]);
@@ -79,7 +82,15 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
-  }, []);
+
+    // Capture Marketing Coupon/Plan
+    const coupon = searchParams.get('coupon');
+    const plan = searchParams.get('plan');
+    if (coupon || plan) {
+      localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
+      console.log('🎟️ Promo capturada (Home):', { coupon, plan });
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // Check current session
@@ -121,6 +132,12 @@ export default function HomePage() {
       setUser(currentUser);
       if (currentUser) {
         fetchProfile(currentUser.id);
+
+        // Marketing Flow Redirect: Se logou/cadastrou e tem promo pendente, leva pro perfil
+        if (localStorage.getItem('pendingPromo')) {
+          router.push('/profile');
+          return;
+        }
 
         // If signup/login happened and there's a pending banner, save it now
         const pending = localStorage.getItem('banneria_pending_session');

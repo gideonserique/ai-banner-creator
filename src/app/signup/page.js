@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import styles from '../page.module.css';
@@ -21,6 +21,7 @@ const translateError = (msg) => {
 
 export default function SignupPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const fileInputRef = useRef(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -34,6 +35,16 @@ export default function SignupPage() {
         confirmPassword: '',
         logoUrl: '',
     });
+
+    // Capture Marketing Coupon/Plan
+    useEffect(() => {
+        const coupon = searchParams.get('coupon');
+        const plan = searchParams.get('plan');
+        if (coupon || plan) {
+            localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
+            console.log('🎟️ Promo capturada:', { coupon, plan });
+        }
+    }, [searchParams]);
 
     const formatWhatsApp = (value) => {
         // Se começar com +, permite formato livre internacional

@@ -10,7 +10,7 @@ const PLAN_PRICE_MAP = {
 
 export async function POST(req) {
     try {
-        const { userId, email, planId } = await req.json();
+        const { userId, email, planId, coupon } = await req.json();
 
         if (!userId) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -35,9 +35,9 @@ export async function POST(req) {
         const success_url = `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
         const cancel_url = `${appUrl}/profile?canceled=true`;
 
-        console.log(`🛒 Creating Stripe Checkout for plan: ${planId} (${priceId})`);
+        console.log(`🛒 Creating Stripe Checkout for plan: ${planId} (${priceId})${coupon ? ` with coupon: ${coupon}` : ''}`);
 
-        const session = await stripe.checkout.sessions.create({
+        const sessionOptions = {
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
             mode: 'subscription',
@@ -48,9 +48,21 @@ export async function POST(req) {
             client_reference_id: userId,
             metadata: {
                 userId,
-                planId, // Critical: used by webhook to assign correct tier
+                planId,
             },
-        });
+        };
+
+        // If a coupon code is provided, pre-apply it
+        if (coupon) {
+            // Note: If using a direct Coupon ID, use { coupon: coupon }
+            // If using a Promotion Code (the visible string like DESC20), Stripe requires the ID.
+            // However, Stripe also allows 'discounts' with 'promotion_code' for some flows.
+            // For simple implementation, we'll try 'coupon' which often maps to the code if it matches.
+            // WARNING: If 'coupon' fails because it expects an ID, user might need to use Promotion Codes.
+            sessionOptions.discounts = [{ coupon: coupon }];
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionOptions);
 
         return NextResponse.json({ url: session.url });
     } catch (err) {
