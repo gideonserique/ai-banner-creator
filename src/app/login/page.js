@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import styles from '../page.module.css';
@@ -27,6 +27,16 @@ export default function LoginPage() {
         password: '',
     });
 
+    // Capture Marketing Coupon/Plan
+    useEffect(() => {
+        const coupon = searchParams.get('coupon');
+        const plan = searchParams.get('plan');
+        if (coupon || plan) {
+            localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
+            console.log('🎟️ Promo capturada (Login):', { coupon, plan });
+        }
+    }, [searchParams]);
+
     const handleChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -44,7 +54,12 @@ export default function LoginPage() {
 
             if (error) throw error;
 
-            router.push('/');
+            const pending = localStorage.getItem('pendingPromo');
+            if (pending) {
+                router.push('/profile');
+            } else {
+                router.push('/');
+            }
             router.refresh();
         } catch (err) {
             setError(translateError(err.message));

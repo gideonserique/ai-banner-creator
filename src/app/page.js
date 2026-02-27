@@ -97,7 +97,15 @@ export default function HomePage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      if (currentUser) fetchProfile(currentUser.id);
+      if (currentUser) {
+        fetchProfile(currentUser.id);
+
+        // Marketing Flow Redirect: Se logou com promo pendente, leva pro perfil
+        if (localStorage.getItem('pendingPromo')) {
+          router.push('/profile');
+          return;
+        }
+      }
 
       // If user just logged in and has pending banner, restore it
       if (currentUser) {

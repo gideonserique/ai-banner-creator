@@ -147,7 +147,12 @@ export default function SignupPage() {
 
                 if (profileError) throw profileError;
 
-                router.push('/');
+                const pending = localStorage.getItem('pendingPromo');
+                if (pending) {
+                    router.push('/profile');
+                } else {
+                    router.push('/');
+                }
                 router.refresh();
             }
         } catch (err) {
