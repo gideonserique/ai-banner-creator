@@ -35,13 +35,13 @@ export async function POST(req) {
         const success_url = `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
         const cancel_url = `${appUrl}/profile?canceled=true`;
 
-        console.log(`🛒 Creating Stripe Checkout for plan: ${planId} (${priceId})${coupon ? ` with coupon: ${coupon}` : ''}`);
+        console.log(`🛒 Creating Stripe Checkout for plan: ${planId} (${priceId})${coupon ? ` with discount: ${coupon}` : ''}`);
+
 
         const sessionOptions = {
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
             mode: 'subscription',
-            allow_promotion_codes: true,
             success_url,
             cancel_url,
             customer_email: email,
@@ -52,14 +52,19 @@ export async function POST(req) {
             },
         };
 
-        // If a coupon code is provided, pre-apply it
+        // If a discount code is provided, pre-apply it
         if (coupon) {
-            // Note: If using a direct Coupon ID, use { coupon: coupon }
-            // If using a Promotion Code (the visible string like DESC20), Stripe requires the ID.
-            // However, Stripe also allows 'discounts' with 'promotion_code' for some flows.
-            // For simple implementation, we'll try 'coupon' which often maps to the code if it matches.
-            // WARNING: If 'coupon' fails because it expects an ID, user might need to use Promotion Codes.
-            sessionOptions.discounts = [{ coupon: coupon }];
+            // Promotion Code IDs start with 'promo_', Coupon IDs don't
+            if (coupon.startsWith('promo_')) {
+                sessionOptions.discounts = [{ promotion_code: coupon }];
+            } else {
+                sessionOptions.discounts = [{ coupon: coupon }];
+            }
+            // Cannot use allow_promotion_codes when discounts are pre-applied
+            sessionOptions.allow_promotion_codes = false;
+        } else {
+            // Allow users to enter promo codes manually if none pre-applied
+            sessionOptions.allow_promotion_codes = true;
         }
 
         const session = await stripe.checkout.sessions.create(sessionOptions);
