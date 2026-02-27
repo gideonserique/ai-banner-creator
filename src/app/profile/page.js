@@ -118,6 +118,16 @@ export default function ProfilePage() {
             setError('Checkout cancelado. Você pode tentar novamente a qualquer momento.');
             window.history.replaceState({}, '', '/profile');
         }
+
+        // Save URL promo params to localStorage (handles middleware redirect)
+        const urlPlan = params.get('plan');
+        const urlCoupon = params.get('coupon');
+        if (urlPlan && urlPlan !== 'free') {
+            console.log('🎟️ [PROFILE] Promo detectada na URL:', { urlPlan, urlCoupon });
+            localStorage.setItem('pendingPromo', JSON.stringify({ plan: urlPlan, coupon: urlCoupon }));
+            // Clean URL so it doesn't trigger again on refresh
+            window.history.replaceState({}, '', '/profile');
+        }
     }, []);
 
     const handleLogout = async () => {

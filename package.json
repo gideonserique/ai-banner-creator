@@ -12,6 +12,7 @@
     "@fal-ai/client": "^1.9.3",
     "@google/generative-ai": "^0.24.1",
     "@stripe/stripe-js": "^8.7.0",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.97.0",
     "dotenv": "^17.3.1",
     "fabric": "^7.2.0",
