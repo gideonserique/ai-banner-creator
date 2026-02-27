@@ -27,7 +27,9 @@ export default function LoginPage() {
         password: '',
     });
 
-    // Capture Marketing Coupon/Plan
+    const [checkingAuth, setCheckingAuth] = useState(true);
+
+    // Capture Marketing Coupon/Plan & Check Session
     useEffect(() => {
         const coupon = searchParams.get('coupon');
         const plan = searchParams.get('plan');
@@ -36,12 +38,26 @@ export default function LoginPage() {
             console.log('🎟️ Promo capturada (Login):', { coupon, plan });
         }
 
-        // Se já estiver logado e chegou aqui com promo, manda pro perfil
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user && (coupon || plan || localStorage.getItem('pendingPromo'))) {
-                router.push('/profile');
+        async function checkSession() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    // Se já estiver logado, manda pro perfil ou home
+                    const pending = localStorage.getItem('pendingPromo');
+                    if (pending || coupon || plan) {
+                        router.push('/profile');
+                    } else {
+                        router.push('/');
+                    }
+                } else {
+                    setCheckingAuth(false);
+                }
+            } catch (err) {
+                console.error('Erro ao verificar sessão:', err);
+                setCheckingAuth(false);
             }
-        });
+        }
+        checkSession();
     }, [searchParams, router]);
 
     const handleChange = (e) => {
@@ -74,6 +90,14 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (checkingAuth) {
+        return (
+            <div className={styles.authContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className={styles.spinner} style={{ width: '40px', height: '40px' }} />
+            </div>
+        );
+    }
 
     return (
         <div className={styles.authContainer}>

@@ -175,7 +175,7 @@ export default function ProfilePage() {
                                 localStorage.removeItem('pendingPromo');
                                 if (plan) {
                                     console.log('🚀 Disparando auto-checkout para:', { plan, coupon });
-                                    handleSubscribe(plan, coupon);
+                                    handleSubscribe(plan, coupon, session.user);
                                 }
                             } catch (e) {
                                 console.error('Erro no auto-checkout:', e);
@@ -259,16 +259,23 @@ export default function ProfilePage() {
         }
     };
 
-    const handleSubscribe = async (planSlug, couponCode = null) => {
+    const handleSubscribe = async (planSlug, couponCode = null, overrideUser = null) => {
         if (planSlug === 'free') return;
+
+        const activeUser = overrideUser || user;
+        if (!activeUser?.id) {
+            console.error('❌ User not found for subscription');
+            return;
+        }
+
         setCheckoutLoading(planSlug); setError('');
         try {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: user.id,
-                    email: user.email,
+                    userId: activeUser.id,
+                    email: activeUser.email,
                     planId: planSlug,
                     coupon: couponCode
                 }),
