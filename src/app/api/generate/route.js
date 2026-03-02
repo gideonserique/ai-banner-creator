@@ -91,8 +91,8 @@ export async function POST(request) {
     }
 
     const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL (SÉRIO): O logo foi fornecido. Use as cores dele como BASE e INSPIRAÇÃO, mas integre outras cores complementares e harmoniosas para o design não ficar monótono. NÃO use apenas as cores do logo se isso prejudicar o visual.`
-      : (companyName ? `IDENTIDADE VISUAL: Inclua o nome da empresa "${companyName}" de forma integrada ao design.` : "");
+      ? `IDENTIDADE VISUAL (SÉRIO/OBRIGATÓRIO): Use o logotipo fornecido nas imagens de referência. Posicione-o de forma elegante e profissional. Use as cores dele como BASE e INSPIRAÇÃO, mas integre outras cores complementares para o design não ficar monótono.`
+      : (companyName ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Inclua o nome da empresa "${companyName}" de forma integrada e elegante no design.` : "");
 
     const referenceInstruction = productUrl
       ? `PRODUTO FÍSICO (CRITICAL): Analise cada detalhe da foto do produto em anexo. MANTENHA as características originais (forma, cores, texturas). O cenário deve ser criado AO REDOR do produto para valorizá-lo.`
@@ -101,14 +101,16 @@ export async function POST(request) {
     const fullPrompt = `VOCÊ É UM DIRETOR DE ARTE ELITE. 
     BANNER ${dimensions.label.toUpperCase()} (${dimensions.width}x${dimensions.height}).
     DIRETRIZ ESTÉTICA: ${aestheticVibe}
-    PROPOSTA DO DESIGN: ${prompt}
+    PROPOSTA DO DESIGN (CONTEÚDO PRINCIPAL): ${prompt}
     ${brandingInstruction}
     ${referenceInstruction}
-    REGRAS CRÍTICAS: 
-    1. AVOID generic repetitions. NÃO use fundos de mármore ou fontes douradas se não fizerem sentido ou se não forem solicitados. 
+    REGRAS CRÍTICAS DE TEXTO:
+    1. TEXTO ESTRITO: Use APENAS o texto solicitado na "PROPOSTA DO DESIGN". NÃO adicione frases extras, promoções não solicitadas, nem chamadas como "Apenas hoje!", "Oferta!", "Peça agora" ou "WhatsApp" se o usuário não escreveu isso. Hallucinações de texto são proibidas.
+    2. Texto apenas em Português impecável.
+    REGRAS DE COMPOSIÇÃO: 
+    1. AVOID generic repetitions. NÃO use fundos de mármore ou fontes douradas se não fizerem sentido. 
     2. Crie composições ÚNICAS para cada setor. 
-    3. Texto apenas em Português impecável. 
-    4. Ocupar 100% do espaço, sem bordas.`;
+    3. Ocupar 100% do espaço, sem bordas.`;
 
     // ── 5. Generation Shot (Fal.ai) ──────────────────────────────────────
     console.log(`[FAL.AI] 🚀 Target Model: ${activeModelId}`);
@@ -147,14 +149,21 @@ export async function POST(request) {
 
     // If we have a product image, map it to the correct model parameter
     if (productUrl) {
+      const allImages = [productUrl];
+      if (logoUrl) {
+        // Prepare logo for Fal if not already there (it might be a URL or base64)
+        const activeLogo = logoUrl.startsWith('data:') ? await uploadToFal(logoUrl) : logoUrl;
+        if (activeLogo) allImages.push(activeLogo);
+      }
+
       if (activeModelId.includes("nano-banana") ||
         activeModelId.includes("gpt-image") ||
         activeModelId.includes("seedream") ||
         activeModelId.includes("flux-2-pro")) {
-        // Nano Banana (Pro & 2), GPT Image Edit, Seedream and Flux 2 Pro Edit expect image_urls array
-        input.image_urls = [productUrl];
+        // Multi-image compatible models
+        input.image_urls = allImages;
       } else {
-        // Recraft (and standard Flux) expect a single image_url string
+        // Single image models
         input.image_url = productUrl;
       }
     }
