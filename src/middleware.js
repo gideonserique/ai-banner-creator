@@ -12,15 +12,8 @@ export async function middleware(req) {
         const isAuthPage = pathname === '/signup' || pathname === '/login';
 
         if (session?.user && isAuthPage) {
-            const coupon = searchParams.get('coupon');
-            const plan = searchParams.get('plan');
-
-            const profileUrl = new URL('/profile', req.url);
-            if (plan) profileUrl.searchParams.set('plan', plan);
-            if (coupon) profileUrl.searchParams.set('coupon', coupon);
-
-            console.log('[MIDDLEWARE] User logged in. Redirecting to:', profileUrl.toString());
-            return NextResponse.redirect(profileUrl);
+            console.log('[MIDDLEWARE] User already logged in. Redirecting to home.');
+            return NextResponse.redirect(new URL('/', req.url));
         }
     } catch (e) {
         console.error('[MIDDLEWARE] Error:', e.message);

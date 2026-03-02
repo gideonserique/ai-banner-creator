@@ -118,16 +118,6 @@ export default function ProfilePage() {
             setError('Checkout cancelado. Você pode tentar novamente a qualquer momento.');
             window.history.replaceState({}, '', '/profile');
         }
-
-        // Save URL promo params to localStorage (handles middleware redirect)
-        const urlPlan = params.get('plan');
-        const urlCoupon = params.get('coupon');
-        if (urlPlan && urlPlan !== 'free') {
-            console.log('🎟️ [PROFILE] Promo detectada na URL:', { urlPlan, urlCoupon });
-            localStorage.setItem('pendingPromo', JSON.stringify({ plan: urlPlan, coupon: urlCoupon }));
-            // Clean URL so it doesn't trigger again on refresh
-            window.history.replaceState({}, '', '/profile');
-        }
     }, []);
 
     const handleLogout = async () => {
@@ -173,25 +163,7 @@ export default function ProfilePage() {
                         stripe_customer_id: data.stripe_customer_id || '',
                         stripe_subscription_id: data.stripe_subscription_id || '',
                         subscription_expires_at: data.subscription_expires_at || null,
-                        isAdmin: isAdmin,
                     });
-
-                    // AUTO-CHECKOUT: Se houver uma promo pendente no localStorage, dispara agora
-                    if (data.subscription_tier === 'free' || !data.subscription_tier) {
-                        const pending = localStorage.getItem('pendingPromo');
-                        if (pending) {
-                            try {
-                                const { coupon, plan } = JSON.parse(pending);
-                                localStorage.removeItem('pendingPromo');
-                                if (plan) {
-                                    console.log('🚀 Disparando auto-checkout para:', { plan, coupon });
-                                    handleSubscribe(plan, coupon, session.user);
-                                }
-                            } catch (e) {
-                                console.error('Erro no auto-checkout:', e);
-                            }
-                        }
-                    }
                 }
             }
         } catch (err) {

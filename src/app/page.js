@@ -83,15 +83,7 @@ function HomeContent() {
 
   useEffect(() => {
     setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
-
-    // Capture Marketing Coupon/Plan
-    const coupon = searchParams.get('coupon');
-    const plan = searchParams.get('plan');
-    if (coupon || plan) {
-      localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
-      console.log('🎟️ Promo capturada (Home):', { coupon, plan });
-    }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     // Check current session
@@ -100,13 +92,6 @@ function HomeContent() {
       setUser(currentUser);
       if (currentUser) {
         fetchProfile(currentUser.id);
-
-        // Marketing Flow Redirect: Se logou com promo pendente, leva pro perfil
-        if (localStorage.getItem('pendingPromo')) {
-          console.log('🚀 [HOME] Redirecionando usuário para /profile (promo detectada na carga inicial)');
-          window.location.replace('/profile');
-          return;
-        }
       }
 
       // If user just logged in and has pending banner, restore it
@@ -142,13 +127,6 @@ function HomeContent() {
       setUser(currentUser);
       if (currentUser) {
         fetchProfile(currentUser.id);
-
-        // Marketing Flow Redirect: Se logou/cadastrou e tem promo pendente, leva pro perfil
-        if (localStorage.getItem('pendingPromo')) {
-          console.log('🚀 [HOME] Redirecionando usuário para /profile (promo detectada via listener)');
-          window.location.replace('/profile');
-          return;
-        }
 
         // If signup/login happened and there's a pending banner, save it now
         const pending = localStorage.getItem('banneria_pending_session');

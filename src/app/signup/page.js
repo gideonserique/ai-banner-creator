@@ -38,26 +38,14 @@ function SignupContent() {
 
     const [checkingAuth, setCheckingAuth] = useState(true);
 
-    // Capture Marketing Coupon/Plan & Check Session
+    // Check Session
     useEffect(() => {
-        const coupon = searchParams.get('coupon');
-        const plan = searchParams.get('plan');
-        if (coupon || plan) {
-            localStorage.setItem('pendingPromo', JSON.stringify({ coupon, plan }));
-            console.log('🎟️ [SIGNUP] Promo capturada:', { coupon, plan });
-        }
-
         let isMounted = true;
 
         const performRedirect = () => {
             if (!isMounted) return;
-            const pending = localStorage.getItem('pendingPromo');
             console.log('🚀 [SIGNUP] Redirecionando usuário logado...');
-            if (pending || coupon || plan) {
-                window.location.replace('/profile');
-            } else {
-                window.location.replace('/');
-            }
+            window.location.replace('/');
         };
 
         // Aggressive checks
@@ -191,12 +179,7 @@ function SignupContent() {
 
                 if (profileError) throw profileError;
 
-                const pending = localStorage.getItem('pendingPromo');
-                if (pending) {
-                    window.location.replace('/profile');
-                } else {
-                    window.location.replace('/');
-                }
+                window.location.replace('/');
             }
         } catch (err) {
             setError(translateError(err.message));
