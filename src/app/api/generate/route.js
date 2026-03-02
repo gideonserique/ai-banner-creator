@@ -98,6 +98,7 @@ export async function POST(request) {
     // Dynamic Endpoint Promotion (Text-to-Image -> Edit/Image-to-Image)
     if (productUrl) {
       if (activeModelId === "fal-ai/nano-banana-pro") activeModelId = "fal-ai/nano-banana-pro/edit";
+      if (activeModelId === "fal-ai/nano-banana-2") activeModelId = "fal-ai/nano-banana-2/edit";
       if (activeModelId === "fal-ai/gpt-image-1.5") activeModelId = "fal-ai/gpt-image-1.5/edit";
       if (activeModelId === "fal-ai/flux-2-pro") activeModelId = "fal-ai/flux-2-pro/edit";
       if (activeModelId === "fal-ai/recraft-v3") activeModelId = "fal-ai/recraft/v3/image-to-image";
@@ -112,7 +113,7 @@ export async function POST(request) {
 
     // Model-Specific Parameter Normalization
     if (activeModelId.includes("nano-banana")) {
-      // Nano Banana uses 'aspect_ratio' with colon format (e.g. "16:9")
+      // Both Nano Banana Pro and Nano Banana 2 use 'aspect_ratio' with colon format
       const ratioMap = { square: "1:1", portrait: "9:16", landscape: "16:9" };
       input.aspect_ratio = ratioMap[size] || "1:1";
     } else if (activeModelId.includes("gpt-image")) {
@@ -132,7 +133,7 @@ export async function POST(request) {
         activeModelId.includes("gpt-image") ||
         activeModelId.includes("seedream") ||
         activeModelId.includes("flux-2-pro")) {
-        // Nano Banana Edit, GPT Image Edit, Seedream and Flux 2 Pro Edit expect image_urls array
+        // Nano Banana (Pro & 2), GPT Image Edit, Seedream and Flux 2 Pro Edit expect image_urls array
         input.image_urls = [productUrl];
       } else {
         // Recraft (and standard Flux) expect a single image_url string
