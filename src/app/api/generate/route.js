@@ -75,22 +75,40 @@ export async function POST(request) {
     const uploadedImages = await Promise.all(images.map(img => uploadToFal(img)));
     const productUrl = uploadedImages[0] || null; // Primary product image
 
-    // ── 4. Prompt Engineering (Designer Persona) ────────────────────────
+    // ── 4. Prompt Engineering (Elite Designer Persona) ───────────────────
+    const lowerPrompt = prompt.toLowerCase();
+    let aestheticVibe = "Publicidade de alto impacto, 4k render, iluminação cinematográfica.";
+
+    // Sector-specific adjustment
+    if (lowerPrompt.includes('maquiagem') || lowerPrompt.includes('beleza') || lowerPrompt.includes('moda') || lowerPrompt.includes('elegante')) {
+      aestheticVibe = "Estilo DELICADO e ELEGANTE. Tons suaves ou vibrantes com transições de cores fluídas. Use texturas suaves, ambientes clean e sofisticados. Evite elementos pesados.";
+    } else if (lowerPrompt.includes('tecnologia') || lowerPrompt.includes('app') || lowerPrompt.includes('software') || lowerPrompt.includes('corporativo')) {
+      aestheticVibe = "Estilo CORPORATIVO e MODERNO. Minimalismo tech, superfícies foscas ou metálicas, iluminação futurista e limpa. Design funcional e sóbrio.";
+    } else if (lowerPrompt.includes('academia') || lowerPrompt.includes('carro') || lowerPrompt.includes('ferramenta') || lowerPrompt.includes('masculino')) {
+      aestheticVibe = "Estilo DINÂMICO e FORTE. Tons mais profundos, sombras acentuadas, texturas de concreto, metal ou asfalto. Energia e impacto visual.";
+    } else if (lowerPrompt.includes('hamburguer') || lowerPrompt.includes('comida') || lowerPrompt.includes('restaurante') || lowerPrompt.includes('pizza')) {
+      aestheticVibe = "Estilo GOURMET e APETECÍVEL. Foco total em texturas reais da comida, iluminação quente e acolhedora, cores que despertam o apetite. Ambiente rústico ou moderno.";
+    }
+
     const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Utilize o logotipo fornecido de forma harmônica. Baseie as cores no logotipo.`
-      : (companyName ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Inclua o nome da empresa "${companyName}" de forma elegante.` : "");
+      ? `IDENTIDADE VISUAL (SÉRIO): O logo foi fornecido. Use as cores dele como BASE e INSPIRAÇÃO, mas integre outras cores complementares e harmoniosas para o design não ficar monótono. NÃO use apenas as cores do logo se isso prejudicar o visual.`
+      : (companyName ? `IDENTIDADE VISUAL: Inclua o nome da empresa "${companyName}" de forma integrada ao design.` : "");
 
     const referenceInstruction = productUrl
-      ? `LEITURA PROFUNDA DA REFERÊNCIA (OBRIGATÓRIO): Analise cada detalhe da foto do produto em anexo. MANTENHA as características originais (forma, cores, texturas) e use o comando do usuário apenas para melhorar o cenário e a iluminação ao redor do produto.`
-      : "GERE O PRODUTO DESCRITO COM REALISMO EXTREMO.";
+      ? `PRODUTO FÍSICO (CRITICAL): Analise cada detalhe da foto do produto em anexo. MANTENHA as características originais (forma, cores, texturas). O cenário deve ser criado AO REDOR do produto para valorizá-lo.`
+      : "GERE O PRODUTO DESCRITO COM REALISMO FOTOGRÁFICO.";
 
-    const fullPrompt = `VOCÊ É O MELHOR DESIGNER DO MUNDO. 
+    const fullPrompt = `VOCÊ É UM DIRETOR DE ARTE ELITE. 
     BANNER ${dimensions.label.toUpperCase()} (${dimensions.width}x${dimensions.height}).
-    ESTILO: Publicidade de luxo, 4k render, iluminação cinematográfica.
-    OBJETIVO DO DESIGN: ${prompt}
+    DIRETRIZ ESTÉTICA: ${aestheticVibe}
+    PROPOSTA DO DESIGN: ${prompt}
     ${brandingInstruction}
     ${referenceInstruction}
-    NÃO use bordas pretas. Ocupar todo o espaço. Texto apenas em Português impecável.`;
+    REGRAS CRÍTICAS: 
+    1. AVOID generic repetitions. NÃO use fundos de mármore ou fontes douradas se não fizerem sentido ou se não forem solicitados. 
+    2. Crie composições ÚNICAS para cada setor. 
+    3. Texto apenas em Português impecável. 
+    4. Ocupar 100% do espaço, sem bordas.`;
 
     // ── 5. Generation Shot (Fal.ai) ──────────────────────────────────────
     console.log(`[FAL.AI] 🚀 Target Model: ${activeModelId}`);
