@@ -92,7 +92,7 @@ export async function POST(request) {
 
     const brandingInstruction = logoUrl
       ? `ASSINATURA VISUAL (MANDATÓRIO): O logotipo da empresa FOI FORNECIDO nas imagens de referência. Você DEVE usar este logo exato no banner. NÃO tente criar, desenhar ou inventar qualquer outro símbolo, ícone ou logotipo de empresa. Posicione-o de forma profissional e use suas cores como base para a paleta do banner.`
-      : (companyName ? `ASSINATURA VISUAL (OBRIGATÓRIO): Inclua o nome da empresa "${companyName}" de forma integrada e elegante. NÃO invente logotipos gráficos, use apenas o texto da empresa se o logo não foi fornecido.` : "");
+      : (companyName ? `ASSINATURA VISUAL (CRIATIVO): CRIE um logotipo ou marca nominativa premium para a empresa "${companyName}". O design do logo deve ser moderno, impactante e combinar perfeitamente com o nicho (Ex: se for fast food, algo vibrante; se for luxo, algo elegante). Integre esta marca ao banner de forma profissional.` : "");
 
     const referenceInstruction = productUrl
       ? `PRODUTO FÍSICO (CRITICAL): Analise cada detalhe da foto do produto em anexo. MANTENHA as características originais (forma, cores, texturas). O cenário deve ser criado AO REDOR do produto para valorizá-lo.`
@@ -105,12 +105,13 @@ export async function POST(request) {
     ${brandingInstruction}
     ${referenceInstruction}
     REGRAS CRÍTICAS DE TEXTO:
-    1. TEXTO ESTRITO: Use APENAS o texto solicitado na "PROPOSTA DO DESIGN". NÃO adicione frases extras, promoções não solicitadas, nem chamadas como "Apenas hoje!", "Oferta!", "Peça agora" ou "WhatsApp" se o usuário não escreveu isso. Hallucinações de texto são proibidas.
+    1. TEXTO ESTRITO: Use APENAS o texto solicitado na "PROPOSTA DO DESIGN" para o corpo do anúncio. NÃO adicione frases extras como "Apenas hoje!" se não foi pedido.
     2. Texto apenas em Português impecável.
-    REGRAS DE COMPOSIÇÃO: 
-    1. AVOID generic repetitions. NÃO use fundos de mármore ou fontes douradas se não fizerem sentido. 
-    2. Crie composições ÚNICAS para cada setor. 
-    3. Ocupar 100% do espaço, sem bordas.`;
+    REGRAS DE DESIGN & DINAMISMO:
+    1. HIERARQUIA VISUAL (CRÍTICO): Varie pesos de fonte, tamanhos e cores para criar contraste e impacto. EVITE textos uniformes onde tudo tem a mesma cor e fonte. Combine tons que se complementam de forma harmônica e premium.
+    2. AVOID generic repetitions. NÃO use fundos de mármore ou fontes douradas se não fizerem sentido. 
+    3. Crie composições ÚNICAS para cada setor. 
+    4. Ocupar 100% do espaço, sem bordas.`;
 
     // ── 5. Generation Shot (Fal.ai) ──────────────────────────────────────
     console.log(`[FAL.AI] 🚀 Target Model: ${activeModelId}`);
