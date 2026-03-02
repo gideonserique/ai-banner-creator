@@ -234,13 +234,28 @@ export default function AdminDashboard() {
                             <span style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '20px', background: 'linear-gradient(135deg, #f97316, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>BannerIA</span>
                             <span style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '1px' }}>ADMIN v3</span>
                         </div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                            {new Date().toLocaleString('pt-BR')} • Botoes Fixos Ativos
+                        <p style={{ color: '#4ade80', fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>
+                            BUILD: {process.env.NEXT_PUBLIC_BUILD_ID || 'LEGACY_CACHE_DETECTED'} • {new Date().toLocaleString('pt-BR')}
+                        </p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '4px' }}>
+                            Caso não veja o "Nano Banana 2", use CTRL+SHIFT+R agora.
                         </p>
                     </div>
-                    <button onClick={() => window.location.reload()} style={{ background: '#f97316', border: 'none', color: '#fff', padding: '10px 22px', borderRadius: '20px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', boxShadow: '0 4px 12px rgba(249,115,22,0.3)' }}>
-                        🔄 FORÇAR ATUALIZAÇÃO
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={() => {
+                                localStorage.clear();
+                                sessionStorage.clear();
+                                window.location.reload(true);
+                            }}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '10px 18px', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}
+                        >
+                            🧹 LIMPAR CACHE LOCAL
+                        </button>
+                        <button onClick={() => window.location.reload()} style={{ background: '#f97316', border: 'none', color: '#fff', padding: '10px 22px', borderRadius: '20px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', boxShadow: '0 4px 12px rgba(249,115,22,0.3)' }}>
+                            🔄 FORÇAR ATUALIZAÇÃO
+                        </button>
+                    </div>
                 </div>
 
                 {/* === TRAFFIC KPIs (topo da página) === */}
