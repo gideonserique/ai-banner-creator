@@ -49,7 +49,7 @@ export async function GET(request) {
         // 4. Fetch all banners (excluding admin)
         let bannersQuery = supabaseAdmin
             .from('banners')
-            .select('id, user_id, size, created_at, prompt, image_url, ref_image_url, caption, model_id')
+            .select('id, user_id, size, created_at, prompt, image_url, ref_image_url, caption, model_id, ip_address')
             .order('created_at', { ascending: false });
         if (adminId) bannersQuery = bannersQuery.neq('user_id', adminId);
         const { data: banners = [], error: bannersError } = await bannersQuery;

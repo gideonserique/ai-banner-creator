@@ -707,11 +707,26 @@ export default function AdminDashboard() {
                                         })()}
                                     </div>
                                 </div>
-                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{new Date(item.created_at).toLocaleDateString('pt-BR')}</div>
-                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                                         {{ square: '▣', portrait: '▯', landscape: '▬' }[item.size] || item.size}
                                     </div>
+                                    {item.ip_address && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                            <span style={{ fontSize: '9px', color: blockedIps.some(b => b.ip === item.ip_address) ? '#ef4444' : 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                                {item.ip_address}
+                                            </span>
+                                            <button
+                                                onClick={() => { if (window.confirm(`Bloquear IP ${item.ip_address}?`)) handleBlockIp(item.ip_address, `User: ${item.user_name} - ${item.prompt?.slice(0, 40)}`); }}
+                                                style={{ padding: '2px 6px', borderRadius: '4px', border: `1px solid ${blockedIps.some(b => b.ip === item.ip_address) ? '#22c55e' : '#ef4444'}`, background: 'transparent', color: blockedIps.some(b => b.ip === item.ip_address) ? '#22c55e' : '#ef4444', fontWeight: 700, fontSize: '9px', cursor: 'pointer', lineHeight: '1' }}
+                                                disabled={blockedIps.some(b => b.ip === item.ip_address)}
+                                                title={blockedIps.some(b => b.ip === item.ip_address) ? 'Já bloqueado' : `Bloquear IP: ${item.ip_address}`}
+                                            >
+                                                {blockedIps.some(b => b.ip === item.ip_address) ? '✅' : '🚫'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

@@ -221,6 +221,7 @@ export async function POST(request) {
         prompt: prompt,
         size: size,
         model_id: activeModelId,
+        ip_address: clientIp,
       }]);
       await supabaseAdmin.rpc("increment_generations_count", { user_id_input: userId });
     } else if (sessionId) {
