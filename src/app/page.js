@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -36,9 +36,10 @@ const UX_PHRASES = [
   'Harmonizando elementos do banner...',
 ];
 
-export default function HomePage() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // ... rest of the original HomePage content
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState('square');
   const [images, setImages] = useState([]);
@@ -1254,6 +1255,18 @@ export default function HomePage() {
           </div>
         )
       }
-    </main >
+    </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+        <div className={styles.spinner} style={{ width: '40px', height: '40px' }} />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
