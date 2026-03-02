@@ -215,7 +215,7 @@ export async function GET(request) {
         try {
             const { data: anonData, error: anonError } = await supabaseAdmin
                 .from('anonymous_banners')
-                .select('id, session_id, prompt, size, image_url, ref_image_url, created_at, model_id')
+                .select('id, session_id, prompt, size, image_url, ref_image_url, created_at, model_id, ip_address')
                 .order('created_at', { ascending: false })
                 .limit(50);
             if (!anonError && anonData) anonymousBanners = anonData;

@@ -86,6 +86,7 @@ const TABS = [
     { id: 'users', label: '👥 Usuários' },
     { id: 'activity', label: '🎨 Atividade' },
     { id: 'anon', label: '👻 Anónimos' },
+    { id: 'blocks', label: '🛡️ Bloqueios' },
 ];
 
 export default function AdminDashboard() {
@@ -100,6 +101,10 @@ export default function AdminDashboard() {
     const [deleteMsg, setDeleteMsg] = useState('');
     const [aiSettings, setAiSettings] = useState({ active_model_id: 'fal-ai/flux-2-pro' });
     const [savingSettings, setSavingSettings] = useState(false);
+    const [blockedIps, setBlockedIps] = useState([]);
+    const [newBlockIp, setNewBlockIp] = useState('');
+    const [newBlockReason, setNewBlockReason] = useState('');
+    const [blockingIp, setBlockingIp] = useState(false);
 
     useEffect(() => { checkAndFetch(); }, []);
 
@@ -125,6 +130,15 @@ export default function AdminDashboard() {
             if (setRes.ok) {
                 const setJson = await setRes.json();
                 if (setJson.active_model_id) setAiSettings(setJson);
+            }
+
+            // Fetch blocked IPs
+            const blockRes = await fetch('/api/admin/block-ip', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (blockRes.ok) {
+                const blockJson = await blockRes.json();
+                setBlockedIps(blockJson.blocked_ips || []);
             }
         } catch (e) {
             setError(e.message);
@@ -188,7 +202,6 @@ export default function AdminDashboard() {
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || 'Erro ao excluir');
-            // Remove from local state
             setData(prev => ({
                 ...prev,
                 profiles: prev.profiles.filter(p => p.id !== deleteConfirm.id),
@@ -201,6 +214,50 @@ export default function AdminDashboard() {
             setDeleting(false);
         }
     }
+
+    async function handleBlockIp(ip, reason = '') {
+        setBlockingIp(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/block-ip', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ip, reason }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Falha ao bloquear');
+            setBlockedIps(json.blocked_ips || []);
+            setNewBlockIp('');
+            setNewBlockReason('');
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            setBlockingIp(false);
+        }
+    }
+
+    async function handleUnblockIp(ip) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/block-ip', {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ip }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Falha ao desbloquear');
+            setBlockedIps(json.blocked_ips || []);
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
 
     if (!authorized || loading) {
         return (
@@ -726,6 +783,16 @@ export default function AdminDashboard() {
                                                     REF
                                                 </button>
                                             )}
+                                            {item.ip_address && (
+                                                <button
+                                                    onClick={() => { if (window.confirm(`Bloquear IP ${item.ip_address}?`)) handleBlockIp(item.ip_address, `Anon banner: ${item.prompt?.slice(0, 50)}`); }}
+                                                    style={{ padding: '0 12px', borderRadius: '8px', border: '1px solid #ef4444', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontWeight: 700, fontSize: '10px', cursor: 'pointer' }}
+                                                    title={`Bloquear IP: ${item.ip_address}`}
+                                                    disabled={blockedIps.some(b => b.ip === item.ip_address)}
+                                                >
+                                                    {blockedIps.some(b => b.ip === item.ip_address) ? '✅' : '🚫'}
+                                                </button>
+                                            )}
                                         </div>
 
                                         <div style={{ padding: '12px', paddingTop: '0' }}>
@@ -762,11 +829,88 @@ export default function AdminDashboard() {
                                                     ID: {item.session_id?.slice(0, 8)}
                                                 </div>
                                             </div>
+                                            {item.ip_address && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                                                    <span style={{ fontSize: '9px', color: blockedIps.some(b => b.ip === item.ip_address) ? '#ef4444' : '#a78bfa', fontFamily: 'monospace', fontWeight: 600 }}>
+                                                        IP: {item.ip_address} {blockedIps.some(b => b.ip === item.ip_address) ? '🚫' : ''}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Tab: Bloqueios (IP Blocking) */}
+                {activeTab === 'blocks' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Add IP Form */}
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px', color: 'var(--text-primary)' }}>🛡️ Bloquear Novo IP</div>
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Ex: 189.40.xxx.xxx"
+                                    value={newBlockIp}
+                                    onChange={e => setNewBlockIp(e.target.value)}
+                                    style={{ flex: 1, minWidth: '180px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'monospace' }}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Motivo (opcional)"
+                                    value={newBlockReason}
+                                    onChange={e => setNewBlockReason(e.target.value)}
+                                    style={{ flex: 1, minWidth: '180px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px' }}
+                                />
+                                <button
+                                    onClick={() => { if (newBlockIp.trim()) handleBlockIp(newBlockIp.trim(), newBlockReason.trim()); }}
+                                    disabled={blockingIp || !newBlockIp.trim()}
+                                    style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: blockingIp ? '#666' : '#ef4444', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: blockingIp ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
+                                >
+                                    {blockingIp ? 'Bloqueando...' : '🚫 Bloquear'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Blocked IPs List */}
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>IPs Bloqueados</div>
+                                <span style={{ padding: '2px 10px', borderRadius: '20px', background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontSize: '12px', fontWeight: 700 }}>
+                                    {blockedIps.length}
+                                </span>
+                            </div>
+                            {blockedIps.length === 0 ? (
+                                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '30px', fontSize: '13px' }}>
+                                    Nenhum IP bloqueado no momento. ✅
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {blockedIps.map((entry, i) => (
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '10px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ef4444', fontFamily: 'monospace' }}>
+                                                    🚫 {entry.ip}
+                                                </div>
+                                                {entry.reason && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{entry.reason}</div>}
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    Bloqueado em: {new Date(entry.blocked_at).toLocaleDateString('pt-BR')} {new Date(entry.blocked_at).toLocaleTimeString('pt-BR')}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => { if (window.confirm(`Desbloquear IP ${entry.ip}?`)) handleUnblockIp(entry.ip); }}
+                                                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #22c55e', background: 'transparent', color: '#22c55e', fontWeight: 700, fontSize: '11px', cursor: 'pointer' }}
+                                            >
+                                                ✅ Desbloquear
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

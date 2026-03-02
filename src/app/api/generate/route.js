@@ -21,6 +21,32 @@ export async function POST(request) {
     const { prompt, size = "square", images = [], logoUrl = "", companyName = "", userId = "", sessionId = "" } = await request.json();
     const dimensions = SOCIAL_SIZES[size] || SOCIAL_SIZES.square;
 
+    // ── 0. IP Extraction & Block Check ──────────────────────────────────
+    const forwarded = request.headers.get('x-forwarded-for');
+    const clientIp = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+    try {
+      const { data: blockSetting } = await supabaseAdmin
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'blocked_ips')
+        .single();
+
+      if (blockSetting?.value) {
+        const blockedList = JSON.parse(blockSetting.value);
+        if (blockedList.some(entry => entry.ip === clientIp)) {
+          console.log(`[GENERATE] 🚫 IP bloqueado: ${clientIp}`);
+          return NextResponse.json({
+            error: "IP_BLOCKED",
+            message: "No momento, o serviço de geração não está disponível para o seu dispositivo. Entre em contato com o suporte se acredita que isso é um erro."
+          }, { status: 403 });
+        }
+      }
+    } catch (e) {
+      // If table/key doesn't exist, no IPs are blocked — continue normally
+      console.warn('[GENERATE] Block check skipped:', e.message);
+    }
+
     if (!process.env.FAL_KEY) {
       return NextResponse.json({ error: "FAL_KEY missing" }, { status: 500 });
     }
@@ -205,6 +231,7 @@ export async function POST(request) {
         prompt: prompt,
         size: size,
         model_id: activeModelId,
+        ip_address: clientIp,
       }]);
     }
 

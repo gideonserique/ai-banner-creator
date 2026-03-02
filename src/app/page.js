@@ -62,6 +62,7 @@ function HomeContent() {
   const [showPostGenModal, setShowPostGenModal] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showCaptionPrompt, setShowCaptionPrompt] = useState(false);
   const [generatingCaption, setGeneratingCaption] = useState(false);
@@ -262,6 +263,12 @@ function HomeContent() {
 
         if (errorData.error === 'LIMIT_REACHED') {
           setShowLimitModal(true);
+          setLoading(false);
+          setProgress(0);
+          return;
+        }
+        if (errorData.error === 'IP_BLOCKED') {
+          setShowBlockedModal(true);
           setLoading(false);
           setProgress(0);
           return;
@@ -989,6 +996,33 @@ function HomeContent() {
                   Entendi, vou tentar de novo
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showBlockedModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalContent} style={{ maxWidth: '460px', textAlign: 'center', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <span style={{ fontSize: '56px' }}>🛡️</span>
+              <h2 className={styles.modalTitle} style={{ marginTop: '12px', fontSize: '22px' }}>
+                Serviço Temporariamente Indisponível
+              </h2>
+              <p className={styles.modalSub} style={{ margin: '16px 0', lineHeight: '1.7', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                No momento, a geração de artes não está disponível para o seu dispositivo.
+                Isso pode acontecer por questões de uso ou segurança da plataforma.
+              </p>
+              <div style={{ background: 'rgba(59,130,246,0.05)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(59,130,246,0.15)', marginBottom: '20px', textAlign: 'left' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                  💬 Se você acredita que isso é um engano, entre em contato com nosso suporte para que possamos resolver rapidamente.
+                </p>
+              </div>
+              <button
+                className={styles.primaryBtn}
+                onClick={() => setShowBlockedModal(false)}
+                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 10px 20px rgba(99,102,241,0.2)' }}
+              >
+                Entendi
+              </button>
             </div>
           </div>
         )}
