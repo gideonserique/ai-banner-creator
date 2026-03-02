@@ -91,8 +91,8 @@ export async function POST(request) {
     }
 
     const brandingInstruction = logoUrl
-      ? `IDENTIDADE VISUAL (SÉRIO/OBRIGATÓRIO): Use o logotipo fornecido nas imagens de referência. Posicione-o de forma elegante e profissional. Use as cores dele como BASE e INSPIRAÇÃO, mas integre outras cores complementares para o design não ficar monótono.`
-      : (companyName ? `IDENTIDADE VISUAL (OBRIGATÓRIO): Inclua o nome da empresa "${companyName}" de forma integrada e elegante no design.` : "");
+      ? `ASSINATURA VISUAL (MANDATÓRIO): O logotipo da empresa FOI FORNECIDO nas imagens de referência. Você DEVE usar este logo exato no banner. NÃO tente criar, desenhar ou inventar qualquer outro símbolo, ícone ou logotipo de empresa. Posicione-o de forma profissional e use suas cores como base para a paleta do banner.`
+      : (companyName ? `ASSINATURA VISUAL (OBRIGATÓRIO): Inclua o nome da empresa "${companyName}" de forma integrada e elegante. NÃO invente logotipos gráficos, use apenas o texto da empresa se o logo não foi fornecido.` : "");
 
     const referenceInstruction = productUrl
       ? `PRODUTO FÍSICO (CRITICAL): Analise cada detalhe da foto do produto em anexo. MANTENHA as características originais (forma, cores, texturas). O cenário deve ser criado AO REDOR do produto para valorizá-lo.`
@@ -116,7 +116,8 @@ export async function POST(request) {
     console.log(`[FAL.AI] 🚀 Target Model: ${activeModelId}`);
 
     // Dynamic Endpoint Promotion (Text-to-Image -> Edit/Image-to-Image)
-    if (productUrl) {
+    // FORCE EDIT MODE if we have a product OR a profile logo
+    if (productUrl || logoUrl) {
       if (activeModelId === "fal-ai/nano-banana-pro") activeModelId = "fal-ai/nano-banana-pro/edit";
       if (activeModelId === "fal-ai/nano-banana-2") activeModelId = "fal-ai/nano-banana-2/edit";
       if (activeModelId === "fal-ai/gpt-image-1.5") activeModelId = "fal-ai/gpt-image-1.5/edit";
@@ -124,7 +125,7 @@ export async function POST(request) {
       if (activeModelId === "fal-ai/recraft-v3") activeModelId = "fal-ai/recraft/v3/image-to-image";
       if (activeModelId.includes("seedream")) activeModelId = "fal-ai/bytedance/seedream/v5/lite/edit";
 
-      console.log(`[FAL.AI] 🛠️ Switching to Edit Endpoint: ${activeModelId}`);
+      console.log(`[FAL.AI] 🛠️ Switching to Edit Endpoint (Asset detected): ${activeModelId}`);
     }
 
     const input = {
@@ -147,12 +148,16 @@ export async function POST(request) {
       if (activeModelId.includes("flux")) input.sync_mode = true;
     }
 
-    // If we have a product image, map it to the correct model parameter
-    if (productUrl) {
-      const allImages = [productUrl];
+    // Force image input if we have either product or logo
+    if (productUrl || logoUrl) {
+      const allImages = [];
+      if (productUrl) allImages.push(productUrl);
+
       if (logoUrl) {
         // Prepare logo for Fal if not already there (it might be a URL or base64)
-        const activeLogo = logoUrl.startsWith('data:') ? await uploadToFal(logoUrl) : logoUrl;
+        const activeLogo = (logoUrl.startsWith('data:') || logoUrl.startsWith('blob:') || logoUrl.includes('supabase.co'))
+          ? await uploadToFal(logoUrl)
+          : logoUrl;
         if (activeLogo) allImages.push(activeLogo);
       }
 
@@ -164,7 +169,7 @@ export async function POST(request) {
         input.image_urls = allImages;
       } else {
         // Single image models
-        input.image_url = productUrl;
+        input.image_url = productUrl || allImages[0];
       }
     }
 
