@@ -370,8 +370,9 @@ export default function AdminDashboard() {
                 {/* AI SETTINGS SECTION */}
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '18px', padding: '24px', marginBottom: '24px', marginTop: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ fontWeight: 700, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-primary)' }}>🧪 Central de Inteligência (Fal.ai)</div>
+                            <div style={{ fontSize: '9px', color: '#4ade80', fontWeight: 600, marginTop: '2px' }}>Build: {process.env.NEXT_PUBLIC_BUILD_ID || 'LEGACY-CACHE'}</div>
                             <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Selecione o modelo global de geração de banners para todos os usuários.</p>
                         </div>
                         {savingSettings && <span className={styles.spinner} style={{ width: 14, height: 14 }} />}
