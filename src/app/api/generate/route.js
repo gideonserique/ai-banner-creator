@@ -127,12 +127,26 @@ export async function POST(request) {
     const fullPrompt = `VOCÊ É UM DIRETOR DE ARTE ELITE. 
     BANNER ${dimensions.label.toUpperCase()} (${dimensions.width}x${dimensions.height}).
     DIRETRIZ ESTÉTICA: ${aestheticVibe}
-    PROPOSTA DO DESIGN (CONTEÚDO PRINCIPAL): ${prompt}
+    
+    BRIEFING DO CLIENTE: "${prompt}"
+    
     ${brandingInstruction}
     ${referenceInstruction}
-    REGRAS CRÍTICAS DE TEXTO:
-    1. TEXTO ESTRITO: Use APENAS o texto solicitado na "PROPOSTA DO DESIGN" para o corpo do anúncio. NÃO adicione frases extras como "Apenas hoje!" se não foi pedido.
-    2. Texto apenas em Português impecável.
+    
+    REGRA #1 — SEPARAÇÃO INTELIGENTE DE TEXTO (CRITICAL):
+    O "BRIEFING DO CLIENTE" acima contém DOIS tipos de informação misturados:
+    A) INSTRUÇÕES VISUAIS — São direções para VOCÊ (o designer). Elas descrevem o estilo, o cenário, a câmera ou a sensação desejada. Exemplos: "imagem linda de", "foto feita com sony", "banner bonito", "estilo gourmet", "fundo escuro", "imagem profissional de". Essas frases NÃO devem aparecer como texto visível no banner. Use-as para guiar o visual.
+    B) COPY DO ANÚNCIO — São os textos que DEVEM aparecer visualmente no banner. Exemplos: nomes de produtos, preços (R$ XX,XX), telefones, nomes de empresas, slogans curtos entre aspas, CTAs como "Peça já" (se o cliente escreveu).
+    
+    Analise o briefing com inteligência. Se o cliente escreveu "Imagem linda de promoção de pizza", o texto visível no banner deve ser apenas "PROMOÇÃO DE PIZZA" (ou algo similar). As palavras "imagem linda de" são uma instrução para o visual, NÃO um texto do anúncio.
+    Se o cliente escreveu "foto feita com sony XLR de um hambúrguer duplo por R$ 29,90", renderize apenas "HAMBÚRGUER DUPLO" e "R$ 29,90" como texto no banner. "Foto feita com sony XLR" é uma instrução de estilo.
+    
+    REGRA #2 — NÃO INVENTE TEXTO:
+    NÃO adicione frases que o cliente não escreveu ("Apenas Hoje!", "Peça Agora!", "Oferta Imperdível!"). Use somente o copy extraído do briefing.
+    
+    REGRA #3 — TEXTO EM PORTUGUÊS:
+    Todo texto visível deve estar em Português impecável.
+    
     REGRAS DE DESIGN & DINAMISMO:
     1. HIERARQUIA VISUAL (CRÍTICO): Varie pesos de fonte, tamanhos e cores para criar contraste e impacto. EVITE textos uniformes onde tudo tem a mesma cor e fonte. Combine tons que se complementam de forma harmônica e premium.
     2. AVOID generic repetitions. NÃO use fundos de mármore ou fontes douradas se não fizerem sentido. 
